@@ -410,6 +410,22 @@
       },
       {
         "hidden": false,
+        "id": "select105650625",
+        "maxSelect": 1,
+        "name": "category",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "select",
+        "values": [
+          "Repairs / Maintainence",
+          "Snacks & Drinks Expenses",
+          "New Hardware/Equipment",
+          "Miscellaneous"
+        ]
+      },
+      {
+        "hidden": false,
         "id": "autodate2990389176",
         "name": "created",
         "onCreate": true,
@@ -536,6 +552,15 @@
       },
       {
         "hidden": false,
+        "id": "bool2978803874",
+        "name": "isMember",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "bool"
+      },
+      {
+        "hidden": false,
         "id": "autodate2990389176",
         "name": "created",
         "onCreate": true,
@@ -560,10 +585,10 @@
   },
   {
     "id": "pbc_2153001328",
-    "listRule": null,
-    "viewRule": null,
+    "listRule": "",
+    "viewRule": "",
     "createRule": "@request.auth.id = id || @request.auth.role = 'SuperAdmin'",
-    "updateRule": "@request.auth.id = id || @request.auth.role = 'SuperAdmin'",
+    "updateRule": "",
     "deleteRule": "@request.auth.id = id || @request.auth.role = 'SuperAdmin'",
     "name": "devices",
     "type": "base",
@@ -667,7 +692,7 @@
     "listRule": "",
     "viewRule": "",
     "createRule": "@request.auth.id = id || @request.auth.role = 'SuperAdmin'",
-    "updateRule": "@request.auth.id = id || @request.auth.role = 'SuperAdmin'",
+    "updateRule": "",
     "deleteRule": "@request.auth.id = id || @request.auth.role = 'SuperAdmin'",
     "name": "games",
     "type": "base",
@@ -764,6 +789,101 @@
         "system": false,
         "thumbs": [],
         "type": "file"
+      },
+      {
+        "hidden": false,
+        "id": "autodate2990389176",
+        "name": "created",
+        "onCreate": true,
+        "onUpdate": false,
+        "presentable": false,
+        "system": false,
+        "type": "autodate"
+      },
+      {
+        "hidden": false,
+        "id": "autodate3332085495",
+        "name": "updated",
+        "onCreate": true,
+        "onUpdate": true,
+        "presentable": false,
+        "system": false,
+        "type": "autodate"
+      }
+    ],
+    "indexes": [],
+    "system": false
+  },
+  {
+    "id": "pbc_666141353",
+    "listRule": null,
+    "viewRule": null,
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "name": "membershipLog",
+    "type": "base",
+    "fields": [
+      {
+        "autogeneratePattern": "[a-z0-9]{15}",
+        "hidden": false,
+        "id": "text3208210256",
+        "max": 15,
+        "min": 15,
+        "name": "id",
+        "pattern": "^[a-z0-9]+$",
+        "presentable": false,
+        "primaryKey": true,
+        "required": true,
+        "system": true,
+        "type": "text"
+      },
+      {
+        "hidden": false,
+        "id": "date1058804653",
+        "max": "",
+        "min": "",
+        "name": "Expiry",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "date"
+      },
+      {
+        "hidden": false,
+        "id": "date160738419",
+        "max": "",
+        "min": "",
+        "name": "TakenDate",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "date"
+      },
+      {
+        "hidden": false,
+        "id": "number2392944706",
+        "max": null,
+        "min": null,
+        "name": "amount",
+        "onlyInt": false,
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "number"
+      },
+      {
+        "cascadeDelete": false,
+        "collectionId": "pbc_108570809",
+        "hidden": false,
+        "id": "relation2168032777",
+        "maxSelect": 1,
+        "minSelect": 0,
+        "name": "customer",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "relation"
       },
       {
         "hidden": false,
@@ -977,10 +1097,10 @@
   },
   {
     "id": "pbc_3660498186",
-    "listRule": null,
-    "viewRule": null,
-    "createRule": null,
-    "updateRule": null,
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "",
+    "updateRule": "",
     "deleteRule": "@request.auth.id = id || @request.auth.role = 'SuperAdmin'",
     "name": "sessions",
     "type": "base",
@@ -1090,6 +1210,18 @@
         "max": null,
         "min": null,
         "name": "session_amount",
+        "onlyInt": false,
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "number"
+      },
+      {
+        "hidden": false,
+        "id": "number3495683015",
+        "max": null,
+        "min": null,
+        "name": "snacks_price",
         "onlyInt": false,
         "presentable": false,
         "required": false,
@@ -1265,11 +1397,93 @@
     "system": false
   },
   {
+    "id": "pbc_2769025244",
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "@request.auth.id = id || @request.auth.role = 'SuperAdmin'",
+    "updateRule": "@request.auth.id = id || @request.auth.role = 'SuperAdmin'",
+    "deleteRule": "@request.auth.id = id || @request.auth.role = 'SuperAdmin'",
+    "name": "settings",
+    "type": "base",
+    "fields": [
+      {
+        "autogeneratePattern": "[a-z0-9]{15}",
+        "hidden": false,
+        "id": "text3208210256",
+        "max": 15,
+        "min": 15,
+        "name": "id",
+        "pattern": "^[a-z0-9]+$",
+        "presentable": false,
+        "primaryKey": true,
+        "required": true,
+        "system": true,
+        "type": "text"
+      },
+      {
+        "hidden": false,
+        "id": "json2127584401",
+        "maxSize": 0,
+        "name": "sessions_pricing",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "json"
+      },
+      {
+        "hidden": false,
+        "id": "json3694947423",
+        "maxSize": 0,
+        "name": "ggpoints_config",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "json"
+      },
+      {
+        "autogeneratePattern": "",
+        "hidden": false,
+        "id": "text1213075606",
+        "max": 0,
+        "min": 0,
+        "name": "currency_symbol",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
+        "required": false,
+        "system": false,
+        "type": "text"
+      },
+      {
+        "hidden": false,
+        "id": "autodate2990389176",
+        "name": "created",
+        "onCreate": true,
+        "onUpdate": false,
+        "presentable": false,
+        "system": false,
+        "type": "autodate"
+      },
+      {
+        "hidden": false,
+        "id": "autodate3332085495",
+        "name": "updated",
+        "onCreate": true,
+        "onUpdate": true,
+        "presentable": false,
+        "system": false,
+        "type": "autodate"
+      }
+    ],
+    "indexes": [],
+    "system": false
+  },
+  {
     "id": "pbc_2875923803",
     "listRule": "",
     "viewRule": "",
-    "createRule": "@request.auth.id = id",
-    "updateRule": "@request.auth.id = id || @request.auth.role = 'SuperAdmin'",
+    "createRule": "",
+    "updateRule": "",
     "deleteRule": "@request.auth.id = id || @request.auth.role = 'SuperAdmin'",
     "name": "snacks",
     "type": "base",
@@ -1462,6 +1676,16 @@
           "active",
           "completed"
         ]
+      },
+      {
+        "hidden": false,
+        "id": "json1587448267",
+        "maxSize": 0,
+        "name": "location",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "json"
       },
       {
         "hidden": false,

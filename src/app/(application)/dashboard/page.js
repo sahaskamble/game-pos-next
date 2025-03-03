@@ -1,84 +1,259 @@
 "use client";
 
-import { useAuth } from "@/lib/context/AuthContext";
-import { redirect } from "next/navigation";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart, Users, Calendar, CreditCard } from "lucide-react";
-import { getRecords } from "@/lib/PbUtilityFunctions";
+import { useAuth } from "@/lib/context/AuthContext";
+import { StatsCard } from "@/components/dashboard/StatsCard";
+import { RecentSessions } from "@/components/dashboard/RecentSessions";
+import { Card } from "@/components/ui/card";
+import { BarChart, Users, Timer, Wallet, Gamepad2 } from "lucide-react";
+import { useCollection } from "@/lib/hooks/useCollection";
+import {
+  BarChart as RechartsBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+
+// Add these colors for the donut chart
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export default function Dashboard() {
-	const { user, logout, isValid } = useAuth();
-	const [stats, setStats] = useState({ users: 0, sales: 0, bookings: 0, shifts: 0 });
-	const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { data: sessions, loading: sessionsLoading } = useCollection("sessions", { expand: "customer_id,branch_id" });
+  const { data: customers } = useCollection("customers");
+  const { data: games } = useCollection("games");
+  const [stats, setStats] = useState({
+    totalCustomers: 0,
+    activeCustomers: 0,
+    totalRevenue: 0,
+    averageSessionDuration: 0,
+    mostPlayedGame: { name: '-', popularity_score: 0 },
+  });
+  const [chartData, setChartData] = useState([]);
+  const [gamePopularityData, setGamePopularityData] = useState([]);
 
-	useEffect(() => {
-		if (!isValid) {
-			toast.info("User is not Authenticated");
-			return redirect("/login");
-		}
+  useEffect(() => {
+    if (sessions?.length && customers?.length && games?.length) {
+      const revenue = sessions.reduce((acc, session) => acc + (session.total_amount || 0), 0);
+      const activeSessions = sessions.filter(s => s.status === "active").length;
 
-		async function fetchStats() {
-			try {
-				const usersRes = await getRecords("users");
-				const salesRes = await getRecords("sessions");
-				const bookingsRes = await getRecords("sessions");
-				const shiftsRes = await getRecords("staff_logins");
+      // Calculate average session duration
+      const completedSessions = sessions.filter(s => s.status === "Closed");
+      const avgDuration = completedSessions.reduce((acc, session) => {
+        const startTime = new Date(session.session_in);
+        const endTime = new Date(session.session_out);
 
-				setStats({
-					users: usersRes.success ? usersRes.data.length : 0,
-					sales: salesRes.success ? salesRes.data.reduce((acc, sale) => acc + sale.amount_paid, 0) : 0,
-					bookings: bookingsRes.success ? bookingsRes.data.length : 0,
-					shifts: shiftsRes.success ? shiftsRes.data.length : 0,
-				});
+        if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+          return acc;
+        }
 
-			} catch (error) {
-				console.error("Error fetching dashboard stats:", error);
-				toast.error("Failed to load stats");
-			} finally {
-				setLoading(false);
-			}
-		}
+        const duration = endTime.getTime() - startTime.getTime();
+        return acc + (duration > 0 ? duration : 0);
+      }, 0) / (completedSessions.length || 1);
 
-		fetchStats();
-	}, [isValid]);
+      // Find most played game based on popularity score
+      const mostPlayedGame = games.reduce((prev, current) =>
+        (prev.popularity_score > current.popularity_score) ? prev : current
+      );
 
-	if (!isValid) return null;
+      // Prepare game popularity data for donut chart
+      const gamePopularity = games
+        .sort((a, b) => b.popularity_score - a.popularity_score)
+        .slice(0, 5) // Take top 5 games
+        .map(game => ({
+          name: game.name,
+          value: game.popularity_score || 0
+        }));
 
-	return (
-		<div className="container mx-auto py-10">
-			<h1 className="text-3xl font-bold">Dashboard</h1>
-			<p className="text-muted-foreground">Welcome, {user.username}</p>
+      setGamePopularityData(gamePopularity);
 
-			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-				<DashboardCard title="Total Users" value={stats.users} icon={<Users className="w-6 h-6 text-blue-500" />} loading={loading} />
-				<DashboardCard title="Total Sales" value={`$${stats.sales}`} icon={<CreditCard className="w-6 h-6 text-green-500" />} loading={loading} />
-				<DashboardCard title="Bookings" value={stats.bookings} icon={<Calendar className="w-6 h-6 text-orange-500" />} loading={loading} />
-				<DashboardCard title="Shifts" value={stats.shifts} icon={<BarChart className="w-6 h-6 text-purple-500" />} loading={loading} />
-			</div>
+      setStats({
+        totalCustomers: customers.length,
+        activeCustomers: activeSessions,
+        totalRevenue: revenue,
+        averageSessionDuration: Math.round(avgDuration / (1000 * 60)),
+        mostPlayedGame: {
+          name: mostPlayedGame.name || '-',
+          popularity_score: mostPlayedGame.popularity_score || 0
+        },
+      });
 
-			<div className="mt-6">
-				<Button onClick={() => logout(user.id)} variant="destructive">Logout</Button>
-			</div>
-		</div>
-	);
+      // Existing chart data preparation...
+      const last7DaysData = sessions
+        .filter(session => session.status === "Closed")
+        .reduce((acc, session) => {
+          const date = new Date(session.session_out).toLocaleDateString();
+          const existingDay = acc.find(item => item.date === date);
+
+          if (existingDay) {
+            existingDay.revenue += session.total_amount || 0;
+            existingDay.sessions += 1;
+          } else {
+            acc.push({
+              date,
+              revenue: session.total_amount || 0,
+              sessions: 1
+            });
+          }
+          return acc;
+        }, [])
+        .slice(-7)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      setChartData(last7DaysData);
+    }
+  }, [sessions, customers, games]);
+
+  if (sessionsLoading) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <div className="space-y-8 p-8">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <StatsCard
+          title="Total Customers"
+          value={stats.totalCustomers}
+          icon={Users}
+        />
+        <StatsCard
+          title="Active Customers"
+          value={stats.activeCustomers}
+          icon={Users}
+        />
+        <StatsCard
+          title="Total Revenue"
+          value={`₹${stats.totalRevenue}`}
+          icon={Wallet}
+        />
+        <StatsCard
+          title="Avg. Session Duration"
+          value={`${stats.averageSessionDuration} min`}
+          icon={Timer}
+        />
+        <StatsCard
+          title="Most Played Game"
+          value={stats.mostPlayedGame.name}
+          icon={Gamepad2}
+        />
+      </div>
+
+      <div className="w-full grid gap-4 grid-cols-1 md:grid-cols-5 md:grid-rows-1">
+        <Card className="p-6 col-span-4 row-span-1">
+          <div className="text-xl font-bold mb-4">Revenue Trend</div>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis
+                  dataKey="date"
+                  className="text-sm text-muted-foreground"
+                />
+                <YAxis
+                  className="text-sm text-muted-foreground"
+                  tickFormatter={(value) => `₹${value}`}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="rounded-lg border bg-background p-2 shadow-sm">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="flex flex-col">
+                              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                Revenue
+                              </span>
+                              <span className="font-bold text-muted-foreground">
+                                ₹{payload[0].value}
+                              </span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                Sessions
+                              </span>
+                              <span className="font-bold text-muted-foreground">
+                                {payload[1].value}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#8884d8"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="sessions"
+                  stroke="#82ca9d"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card className="p-6 col-span-4 md:col-span-1 row-span-1">
+          <div className="text-xl font-bold mb-4">Game Popularity</div>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={gamePopularityData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {gamePopularityData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="rounded-lg border bg-background p-2 shadow-sm">
+                          <div className="flex flex-col">
+                            <span className="text-[0.70rem] uppercase text-muted-foreground">
+                              {payload[0].payload.name}
+                            </span>
+                            <span className="font-bold text-muted-foreground">
+                              Score: {payload[0].value}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+
+      <RecentSessions sessions={sessions.slice(-5)} />
+    </div>
+  );
 }
-
-// Dashboard Stat Card Component
-function DashboardCard({ title, value, icon, loading }) {
-	return (
-		<Card className="p-4 flex items-center">
-			<div className="mr-4">{icon}</div>
-			<CardContent>
-				<CardHeader className="p-0">
-					<CardTitle className="text-lg">{title}</CardTitle>
-				</CardHeader>
-				{loading ? <Skeleton className="h-6 w-24" /> : <p className="text-2xl font-semibold">{value}</p>}
-			</CardContent>
-		</Card>
-	);
-}
-

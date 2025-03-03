@@ -13,7 +13,14 @@ export default function LoginPage() {
         onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
         className="absolute top-6 lg:top-4 right-1 lg:right-1/2 p-2 mr-4 rounded-md bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
       >
-        {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+        {theme === "light" ?
+          <div>
+            <Sun size={20} />
+          </div>
+          :
+          <div>
+            <Moon size={20} />
+          </div>}
       </button>
       <div className="grid min-h-svh lg:grid-cols-2">
         <div className="flex flex-col gap-4 p-6 md:p-10">

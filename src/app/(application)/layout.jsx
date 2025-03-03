@@ -15,11 +15,9 @@ export default function ApplicationLayout({ children }) {
       <SidebarInset>
         <ProtectedRoutes role={user?.role}>
           <Header />
-          <main>
-            {children}
-          </main>
+          {children}
         </ProtectedRoutes>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

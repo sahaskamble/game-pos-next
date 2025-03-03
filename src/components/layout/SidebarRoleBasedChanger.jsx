@@ -5,6 +5,19 @@ import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton } from 
 import { usePathname } from "next/navigation";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+	LayoutDashboard,
+	Package,
+	CalendarDays,
+	BookOpenCheck,
+	Settings,
+	BarChart3,
+	Receipt,
+	Users,
+	UserCog,
+	ChevronRight
+} from "lucide-react";
 
 export default function RoleChanger({ role }) {
 	const pathname = usePathname();
@@ -16,39 +29,84 @@ export default function RoleChanger({ role }) {
 
 	const menuItems = {
 		SuperAdmin: [
-			{ label: "Dashboard", path: "/dashboard" },
-			{ label: "Inventory", path: "/inventory" },
-			{ label: "Sessions", path: "/sessions" },
-			{ label: "Bookings", path: "/booking" },
+			{
+				label: "Dashboard",
+				path: "/dashboard",
+				icon: <LayoutDashboard className="w-4 h-4" />
+			},
+			{
+				label: "Inventory",
+				path: "/inventory",
+				icon: <Package className="w-4 h-4" />
+			},
+			{
+				label: "Sessions",
+				path: "/sessions",
+				icon: <CalendarDays className="w-4 h-4" />
+			},
+			{
+				label: "Bookings",
+				path: "/booking",
+				icon: <BookOpenCheck className="w-4 h-4" />
+			},
+			{
+				label: "Settings",
+				path: "/settings",
+				icon: <Settings className="w-4 h-4" />
+			},
 			{
 				label: "Reports",
 				path: "/reports",
+				icon: <BarChart3 className="w-4 h-4" />,
 				subItems: [
 					{
 						label: "Expenses Report",
-						path: "/expense-report",
+						path: "/reports/expense-report",
+						icon: <Receipt className="w-4 h-4" />
 					},
 					{
 						label: "Customer Report",
-						path: "/customer-report",
+						path: "/reports/customer-report",
+						icon: <Users className="w-4 h-4" />
 					},
 					{
 						label: "Staff Report",
-						path: "/staff-report",
+						path: "/reports/staff-report",
+						icon: <UserCog className="w-4 h-4" />
 					},
 				]
 			},
 		],
 		Admin: [
-			{ label: "Dashboard", path: "/dashboard" },
+			{
+				label: "Dashboard",
+				path: "/dashboard",
+				icon: <LayoutDashboard className="w-4 h-4" />
+			},
 		],
 		StoreManager: [
-			{ label: "Sessions", path: "/session" },
-			{ label: "Bookings", path: "/booking" },
+			{
+				label: "Sessions",
+				path: "/session",
+				icon: <CalendarDays className="w-4 h-4" />
+			},
+			{
+				label: "Bookings",
+				path: "/booking",
+				icon: <BookOpenCheck className="w-4 h-4" />
+			},
 		],
 		Staff: [
-			{ label: "Sessions", path: "/session" },
-			{ label: "Bookings", path: "/booking" },
+			{
+				label: "Sessions",
+				path: "/session",
+				icon: <CalendarDays className="w-4 h-4" />
+			},
+			{
+				label: "Bookings",
+				path: "/booking",
+				icon: <BookOpenCheck className="w-4 h-4" />
+			},
 		],
 	};
 
@@ -66,22 +124,38 @@ function RoleMenu({ role, items, pathname }) {
 			<SidebarGroupLabel>{role.replace(/([A-Z])/g, " $1").trim()}</SidebarGroupLabel>
 			<SidebarMenu>
 				<Accordion type="single" collapsible className="w-full">
-					{items.map(({ label, path, subItems }) => (
+					{items.map(({ label, path, icon, subItems }) => (
 						subItems ? (
-							<AccordionItem key={path} value={path} className="px-2">
-								<AccordionTrigger>
-									<span>{label}</span>
+							<AccordionItem key={path} value={path} className="px-2 border-none">
+								<AccordionTrigger className="py-2 hover:no-underline">
+									<div className="flex items-center gap-2">
+										{icon}
+										<span>{label}</span>
+									</div>
 								</AccordionTrigger>
 								<AccordionContent>
-									{subItems.map(({ label, path }) => (
-										<SidebarButton key={path} path={path} isActive={pathname === path}>
-											{label}
-										</SidebarButton>
-									))}
+									<div className="flex flex-col gap-1">
+										{subItems.map(({ label, path, icon }) => (
+											<SidebarButton
+												key={path}
+												path={path}
+												icon={icon}
+												isActive={pathname === path}
+											>
+												{label}
+											</SidebarButton>
+										))}
+									</div>
 								</AccordionContent>
 							</AccordionItem>
 						) : (
-							<SidebarButton key={path} path={path} isActive={pathname === path}>
+							<SidebarButton
+								key={path}
+								path={path}
+								icon={icon}
+								isActive={pathname === path}
+								className="p-2"
+							>
 								{label}
 							</SidebarButton>
 						)
@@ -92,11 +166,17 @@ function RoleMenu({ role, items, pathname }) {
 	);
 }
 
-function SidebarButton({ path, isActive, children }) {
+function SidebarButton({ path, isActive, icon, children }) {
 	return (
-		<SidebarMenuButton className={isActive ? "bg-blue-500 text-white" : ""} href={path}>
-			{children}
-		</SidebarMenuButton>
+		<Link href={path}>
+			<SidebarMenuButton
+				className={`${isActive ? "bg-blue-500 text-white" : ""} gap-5 p-4`}
+				href={path}
+			>
+				{icon}
+				<span>{children}</span>
+			</SidebarMenuButton>
+		</Link>
 	);
 }
 

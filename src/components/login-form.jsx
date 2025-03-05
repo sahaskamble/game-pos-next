@@ -10,6 +10,7 @@ import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/context/AuthContext";
+import PostLoginSplash from "@/components/layout/PostLoginSplash";
 
 export function LoginForm({ className, ...props }) {
   const { branches, login } = useAuth();
@@ -18,6 +19,7 @@ export function LoginForm({ className, ...props }) {
   const [password, setPassword] = useState('');
   const [branch, setBranch] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
 
   // Check if the logged-in user's branch matches the selected branch
   function verifyBranch(data, branch) {
@@ -43,25 +45,18 @@ export function LoginForm({ className, ...props }) {
       return;
     }
 
-    // Role-based navigation
-    switch (response?.record?.role) {
-      case "SuperAdmin":
-        router.replace('/dashboard');
-        break;
-      case "Admin":
-        router.push('/dashboard');
-        break;
-      case "StoreManager":
-        router.push('/booking');
-        break;
-      case "Staff":
-        router.replace('/booking');
-        break;
-      default:
-        toast.warning("You are not Authorized by role for this application");
-        return;
+    // Show splash screen on successful login
+    if (response?.record?.role) {
+      setShowSplash(true);
+      toast.success("Authorization successful");
+      return; // Let the splash screen handle navigation
     }
-    toast.success("Authorization successful");
+
+    toast.warning("You are not Authorized by role for this application");
+  }
+
+  if (showSplash) {
+    return <PostLoginSplash />;
   }
 
   return (

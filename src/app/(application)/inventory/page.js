@@ -4,11 +4,12 @@ import { useState } from "react";
 import { useCollection } from "@/lib/hooks/useCollection";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus } from "lucide-react";
+import { Plus, Smartphone, Gamepad, Coffee } from "lucide-react";
 import { InventoryTable } from "@/components/inventory/InventoryTable";
 import { AddItemDialog } from "@/components/inventory/AddItemDialog";
 import { EditItemDialog } from "@/components/inventory/EditItemDialog";
 import { useAuth } from "@/lib/context/AuthContext";
+import { StatsCard } from "@/components/dashboard/StatsCard";
 
 export default function Inventory() {
   const [activeTab, setActiveTab] = useState("devices");
@@ -17,6 +18,7 @@ export default function Inventory() {
   const { user } = useAuth();
 
   const isAdminOrSuperAdmin = user?.role === 'SuperAdmin' || user?.role === 'Admin';
+  const isStaff = user?.role === 'Staff';
 
   const getItemTypeSingular = (type) => {
     switch (type) {
@@ -130,15 +132,35 @@ export default function Inventory() {
   };
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container px-8 mx-auto py-10">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-3xl font-bold tracking-tight">Inventory</h2>
+        {/* Only show Add button for Admin/SuperAdmin */}
         {isAdminOrSuperAdmin && (
           <Button onClick={() => setShowAddDialog(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add {getItemTypeSingular(activeTab)}
           </Button>
         )}
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-3 mb-8">
+        <StatsCard
+          title="Total Devices"
+          value={devices?.length || 0}
+          icon={Smartphone}
+        />
+        <StatsCard
+          title="Total Games"
+          value={games?.length || 0}
+          icon={Gamepad}
+        />
+        <StatsCard
+          title="Total Snacks"
+          value={snacks?.length || 0}
+          icon={Coffee}
+        />
       </div>
 
       <Tabs defaultValue="devices" value={activeTab} onValueChange={setActiveTab}>
@@ -157,11 +179,13 @@ export default function Inventory() {
               onEdit={isAdminOrSuperAdmin ? setEditingItem : null}
               onDelete={isAdminOrSuperAdmin ? collection.delete : null}
               canModify={isAdminOrSuperAdmin}
+              isReadOnly={isStaff}
             />
           </TabsContent>
         ))}
       </Tabs>
 
+      {/* Only render dialogs for Admin/SuperAdmin */}
       {isAdminOrSuperAdmin && (
         <>
           <AddItemDialog

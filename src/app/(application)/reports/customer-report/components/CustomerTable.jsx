@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -9,16 +9,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ChevronDown } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -27,85 +18,83 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
 
-function StaffTable({ data = [] }) {
-  const [sorting, setSorting] = React.useState([]);
-  const [columnFilters, setColumnFilters] = React.useState([]);
-  const [columnVisibility, setColumnVisibility] = React.useState({});
+export function CustomerTable({ customers, sessions }) {
+  const [sorting, setSorting] = useState([]);
+  const [columnFilters, setColumnFilters] = useState([]);
+  const [columnVisibility, setColumnVisibility] = useState({});
 
   const columns = [
     {
-      accessorKey: "username",
-      header: ({ column }) => (
-        <div
-          className="cursor-pointer select-none flex items-center"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Staff Member
-          {{
-            asc: " 🔼",
-            desc: " 🔽",
-          }[column.getIsSorted()] ?? null}
-        </div>
-      ),
-      cell: ({ row }) => (
-        <div className="flex items-center gap-3">
-          <Avatar>
-            <AvatarFallback>
-              {row.original.username?.charAt(0).toUpperCase() || 'U'}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <div className="font-medium">{row.original.username || 'Unknown'}</div>
-            <div className="text-sm text-muted-foreground">
-              {row.original.email || 'No email'}
-            </div>
-          </div>
-        </div>
-      )
+      accessorKey: "customer_name",
+      header: "Name",
     },
     {
-      accessorKey: "role",
-      header: ({ column }) => (
-        <div
-          className="cursor-pointer select-none flex items-center"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Role
-          {{
-            asc: " 🔼",
-            desc: " 🔽",
-          }[column.getIsSorted()] ?? null}
-        </div>
-      ),
+      accessorKey: "customer_contact",
+      header: "Contact",
     },
     {
-      accessorKey: "branch_id",
+      accessorKey: "expand.branch_id.name",
       header: "Branch",
       cell: ({ row }) => (
-        <div className="flex flex-wrap gap-1">
-          {row.original.expand?.branch_id?.length > 0 ? (
-            row.original.expand.branch_id.map((branch, index) => (
-              <Badge
-                key={index}
-                variant="secondary"
-                className="mr-1"
-              >
-                {branch.name}
-              </Badge>
-            ))
-          ) : (
-            'Not Assigned'
-          )}
+        <div>
+          {row.original.expand?.branch_id?.name || 'Not Assigned'}
         </div>
-      )
-    }
+      ),
+    },
+    {
+      accessorKey: "isMember",
+      header: "Membership",
+      cell: ({ row }) => (
+        <div className={`font-medium ${row.original.isMember ? 'text-green-600' : 'text-red-600'}`}>
+          {row.original.isMember ? 'Member' : 'Non-Member'}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "total_visits",
+      header: "Total Visits",
+      cell: ({ row }) => row.original.total_visits || 0,
+    },
+    {
+      accessorKey: "total_rewards",
+      header: "Total Rewards",
+      cell: ({ row }) => row.original.total_rewards || 0,
+    },
+    {
+      accessorKey: "created",
+      header: "Joined Date",
+      cell: ({ row }) => format(new Date(row.original.created), 'MMM dd, yyyy'),
+    },
+    {
+      id: "totalSpent",
+      header: "Total Spent",
+      cell: ({ row }) => {
+        const customerSessions = sessions.filter(s => s.customer_id === row.original.id);
+        const totalSpent = customerSessions.reduce((sum, s) => sum + (s.total_amount || 0), 0);
+        return `₹${totalSpent.toLocaleString()}`;
+      },
+    },
+    {
+      id: "sessionCount",
+      header: "Total Sessions",
+      cell: ({ row }) => {
+        const sessionCount = sessions.filter(s => s.customer_id === row.original.id).length;
+        return sessionCount;
+      },
+    },
   ];
 
   const table = useReactTable({
-    data,
+    data: customers,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -123,20 +112,18 @@ function StaffTable({ data = [] }) {
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
+      <div className="flex items-center py-4 justify-between">
         <Input
-          placeholder="Filter staff..."
-          value={(table.getColumn("username")?.getFilterValue() ?? "")}
+          placeholder="Filter customers..."
+          value={(table.getColumn("customer_name")?.getFilterValue() ?? "")}
           onChange={(event) =>
-            table.getColumn("username")?.setFilterValue(event.target.value)
+            table.getColumn("customer_name")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
-              Columns <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
+            <Button variant="outline">Columns</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {table
@@ -164,16 +151,18 @@ function StaffTable({ data = [] }) {
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder ? null : 
-                      flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )
-                    }
-                  </TableHead>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  );
+                })}
               </TableRow>
             ))}
           </TableHeader>
@@ -225,5 +214,3 @@ function StaffTable({ data = [] }) {
     </div>
   );
 }
-
-export default StaffTable; 

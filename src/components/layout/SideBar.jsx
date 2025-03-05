@@ -14,19 +14,21 @@ export function AppSidebar() {
 	const { user } = useAuth();
 
 	return (
-		<Sidebar>
-			<SidebarHeader>
-				<div className="inline-flex justify-start items-center gap-4 p-2">
-					<div className="bg-primary w-10 h-10 inline-flex justify-center items-center rounded-lg">
-						<Gamepad2 />
+		<Sidebar className="border-r border-border">
+			<SidebarHeader className="border-b border-border">
+				<div className="flex items-center gap-3 px-6 py-4">
+					<div className="bg-primary w-10 h-10 flex items-center justify-center rounded-xl shadow-lg">
+						<Gamepad2 className="text-primary-foreground w-6 h-6" />
 					</div>
-					<h1>Game Ground</h1>
+					<div>
+						<h1 className="font-semibold text-lg">Game Ground</h1>
+						<p className="text-xs text-muted-foreground">{user?.branch_name || 'Gaming Center'}</p>
+					</div>
 				</div>
 			</SidebarHeader>
 			<SidebarContent>
 				<RoleChanger role={user?.role} />
 			</SidebarContent>
-			<SidebarFooter />
 		</Sidebar>
 	)
 }

@@ -50,6 +50,11 @@ export default function RoleChanger({ role }) {
 				icon: <BookOpenCheck className="w-4 h-4" />
 			},
 			{
+				label: "Cash Log",
+				path: "/cashlog",
+				icon: <Receipt className="w-4 h-4" />
+			},
+			{
 				label: "Settings",
 				path: "/settings",
 				icon: <Settings className="w-4 h-4" />
@@ -83,29 +88,54 @@ export default function RoleChanger({ role }) {
 				path: "/dashboard",
 				icon: <LayoutDashboard className="w-4 h-4" />
 			},
+			{
+				label: "Cash Log",
+				path: "/cashlog",
+				icon: <Receipt className="w-4 h-4" />
+			},
 		],
 		StoreManager: [
 			{
 				label: "Sessions",
-				path: "/session",
+				path: "/sessions",
 				icon: <CalendarDays className="w-4 h-4" />
 			},
 			{
 				label: "Bookings",
 				path: "/booking",
 				icon: <BookOpenCheck className="w-4 h-4" />
+			},
+			{
+				label: "Inventory",
+				path: "/inventory",
+				icon: <Package className="w-4 h-4" />
+			},
+			{
+				label: "Cash Log",
+				path: "/cashlog",
+				icon: <Receipt className="w-4 h-4" />
 			},
 		],
 		Staff: [
 			{
 				label: "Sessions",
-				path: "/session",
+				path: "/sessions",
 				icon: <CalendarDays className="w-4 h-4" />
 			},
 			{
 				label: "Bookings",
 				path: "/booking",
 				icon: <BookOpenCheck className="w-4 h-4" />
+			},
+			{
+				label: "Inventory",
+				path: "/inventory",
+				icon: <Package className="w-4 h-4" />
+			},
+			{
+				label: "Cash Log",
+				path: "/cashlog",
+				icon: <Receipt className="w-4 h-4" />
 			},
 		],
 	};
@@ -126,26 +156,24 @@ function RoleMenu({ role, items, pathname }) {
 				<Accordion type="single" collapsible className="w-full">
 					{items.map(({ label, path, icon, subItems }) => (
 						subItems ? (
-							<AccordionItem key={path} value={path} className="px-2 border-none">
-								<AccordionTrigger className="py-2 hover:no-underline">
-									<div className="flex items-center gap-2">
+							<AccordionItem value={label} key={label} className="border-none">
+								<AccordionTrigger className="py-3 px-6 hover:bg-muted transition-colors duration-200">
+									<div className="flex items-center gap-3">
 										{icon}
-										<span>{label}</span>
+										<span className="font-medium">{label}</span>
 									</div>
 								</AccordionTrigger>
-								<AccordionContent>
-									<div className="flex flex-col gap-1">
-										{subItems.map(({ label, path, icon }) => (
-											<SidebarButton
-												key={path}
-												path={path}
-												icon={icon}
-												isActive={pathname === path}
-											>
-												{label}
-											</SidebarButton>
-										))}
-									</div>
+								<AccordionContent className="pb-0">
+									{subItems.map(({ label: subLabel, path: subPath, icon: subIcon }) => (
+										<SidebarButton
+											key={subPath}
+											path={subPath}
+											icon={subIcon}
+											isActive={pathname === subPath}
+										>
+											{subLabel}
+										</SidebarButton>
+									))}
 								</AccordionContent>
 							</AccordionItem>
 						) : (
@@ -154,7 +182,6 @@ function RoleMenu({ role, items, pathname }) {
 								path={path}
 								icon={icon}
 								isActive={pathname === path}
-								className="p-2"
 							>
 								{label}
 							</SidebarButton>
@@ -168,13 +195,16 @@ function RoleMenu({ role, items, pathname }) {
 
 function SidebarButton({ path, isActive, icon, children }) {
 	return (
-		<Link href={path}>
+		<Link href={path} className="w-full">
 			<SidebarMenuButton
-				className={`${isActive ? "bg-blue-500 text-white" : ""} gap-5 p-4`}
-				href={path}
+				className={`w-full rounded-lg transition-colors duration-200 ${
+					isActive 
+						? "bg-primary/10 text-primary hover:bg-primary/15" 
+						: "hover:bg-muted"
+				} gap-3 px-6 py-3`}
 			>
 				{icon}
-				<span>{children}</span>
+				<span className="font-medium">{children}</span>
 			</SidebarMenuButton>
 		</Link>
 	);

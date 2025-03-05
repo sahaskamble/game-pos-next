@@ -6,7 +6,7 @@ export const ProtectedUrls = [
   },
   {
     url: 'inventory',
-    accessTo: ['SuperAdmin', 'Admin']
+    accessTo: ['SuperAdmin', 'Admin', 'Staff']
   },
   {
     url: 'settings',
@@ -23,6 +23,10 @@ export const ProtectedUrls = [
   {
     url: 'reports',
     accessTo: ['SuperAdmin', 'Admin']
+  },
+  {
+    url: 'cashlog',
+    accessTo: ['SuperAdmin', 'Admin', 'Staff']
   },
 ]
 

@@ -3,6 +3,8 @@
 import {
 	Area,
 	AreaChart,
+	Bar,
+	BarChart,
 	CartesianGrid,
 	ResponsiveContainer,
 	XAxis,
@@ -17,54 +19,105 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 
-// ExpenseChart component to be reused for both weekly and monthly charts
+// Custom tooltip formatter
+const CustomTooltip = ({ active, payload, label, prefix = "" }) => {
+	if (active && payload && payload.length) {
+		return (
+			<div className="bg-background border rounded-lg p-2 shadow-lg">
+				<p className="text-sm font-medium">{label}</p>
+				<p className="text-sm text-muted-foreground">
+					{prefix}{payload[0].value.toLocaleString()}
+				</p>
+			</div>
+		);
+	}
+	return null;
+};
+
 export const ChartComponent = ({
 	title,
 	data,
-	period = "day", // 'day' or 'month'
+	period = "day",
+	type = "area",
+	xAxisDataKey = "month",
+	dataKey = "value",
+	prefix = "",
 	gradientColor = "#8884d8",
+	showDetails = false,
 }) => {
-	const dataKey = period === "day" ? "day" : "month";
 	const gradientId = `${period}Gradient`;
+
+	const renderChart = () => {
+		if (type === "bar") {
+			return (
+				<BarChart
+					data={data}
+					margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
+				>
+					<CartesianGrid strokeDasharray="3 3" vertical={false} />
+					<XAxis
+						dataKey={xAxisDataKey}
+						axisLine={false}
+						tickLine={false}
+						tick={{ fill: '#888', fontSize: 12 }}
+					/>
+					<YAxis
+						axisLine={false}
+						tickLine={false}
+						tick={{ fill: '#888', fontSize: 12 }}
+						width={60}
+					/>
+					<Tooltip content={<CustomTooltip prefix={prefix} />} />
+					<Bar dataKey={dataKey} fill={gradientColor} radius={[4, 4, 0, 0]} />
+				</BarChart>
+			);
+		}
+
+		return (
+			<AreaChart
+				data={data}
+				margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
+			>
+				<defs>
+					<linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+						<stop offset="5%" stopColor={gradientColor} stopOpacity={0.8} />
+						<stop offset="95%" stopColor={gradientColor} stopOpacity={0.2} />
+					</linearGradient>
+				</defs>
+				<CartesianGrid strokeDasharray="3 3" vertical={false} />
+				<XAxis
+					dataKey={xAxisDataKey}
+					axisLine={false}
+					tickLine={false}
+					tick={{ fill: '#888', fontSize: 12 }}
+				/>
+				<YAxis
+					axisLine={false}
+					tickLine={false}
+					tick={{ fill: '#888', fontSize: 12 }}
+					width={60}
+				/>
+				<Tooltip content={<CustomTooltip prefix={prefix} />} />
+				<Area
+					type="monotone"
+					dataKey={dataKey}
+					stroke={gradientColor}
+					fillOpacity={1}
+					fill={`url(#${gradientId})`}
+				/>
+			</AreaChart>
+		);
+	};
 
 	return (
 		<Card>
-			<CardHeader className="pb-2 flex flex-row justify-between items-center">
+			<CardHeader className="pb-2">
 				<CardTitle className="text-base font-medium">{title}</CardTitle>
 			</CardHeader>
 			<CardContent>
-				<div className="h-64">
+				<div className="h-[300px]">
 					<ResponsiveContainer width="100%" height="100%">
-						<AreaChart
-							data={data}
-							margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
-						>
-							<defs>
-								<linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-									<stop offset="5%" stopColor={gradientColor} stopOpacity={0.8} />
-									<stop offset="95%" stopColor={gradientColor} stopOpacity={0.2} />
-								</linearGradient>
-							</defs>
-							<CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#444" />
-							<XAxis
-								dataKey={dataKey}
-								axisLine={false}
-								tickLine={false}
-								tick={{ fill: '#aaa', fontSize: 12 }}
-							/>
-							<YAxis hide={true} />
-							<Tooltip
-								contentStyle={{ backgroundColor: '#333', border: 'none' }}
-								labelStyle={{ color: '#fff' }}
-							/>
-							<Area
-								type="monotone"
-								dataKey="value"
-								stroke={gradientColor}
-								fillOpacity={1}
-								fill={`url(#${gradientId})`}
-							/>
-						</AreaChart>
+						{renderChart()}
 					</ResponsiveContainer>
 				</div>
 			</CardContent>

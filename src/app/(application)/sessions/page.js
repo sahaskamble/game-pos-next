@@ -13,13 +13,13 @@ export default function Sessions() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingSession, setEditingSession] = useState(null);
   const { user } = useAuth();
-  
-  const { data, loading, create, update, remove } = useCollection("sessions", {
-    expand: 'customer_id,branch_id',
+
+  const { data, loading, createItem: create, updateItem: update, deleteItem: remove } = useCollection("sessions", {
+    expand: 'customer_id,branch_id,device_id,game_id,session_snacks.snack_id',
   });
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container px-8 mx-auto py-10">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-3xl font-bold tracking-tight">Sessions</h2>
         <Button onClick={() => setShowAddDialog(true)}>

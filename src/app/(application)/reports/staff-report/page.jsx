@@ -39,13 +39,13 @@ function StaffReports() {
   useEffect(() => {
     if (users && staffLogins) {
       // Filter only staff users (excluding SuperAdmin)
-      const staffUsers = users.filter(user => 
+      const staffUsers = users.filter(user =>
         ['Staff', 'Admin', 'StoreManager'].includes(user.role)
       );
 
       // Get today's date in ISO format
       const today = new Date().toISOString().split('T')[0];
-      
+
       // Get active logins for today
       const todayLogins = staffLogins.filter(login => {
         const loginDate = new Date(login.login_time).toISOString().split('T')[0];
@@ -55,7 +55,7 @@ function StaffReports() {
       // Calculate stats
       const total = staffUsers.length;
       const present = todayLogins.length;
-      
+
       setStaffStats({
         total,
         present,
@@ -66,7 +66,7 @@ function StaffReports() {
       // Initialize data for all months with zero values
       const monthlyLoginCounts = {};
       const monthlyAttendanceRates = {};
-      
+
       allMonths.forEach(month => {
         monthlyLoginCounts[month] = 0;
         monthlyAttendanceRates[month] = 0;
@@ -76,7 +76,7 @@ function StaffReports() {
       staffLogins.forEach(login => {
         const month = new Date(login.login_time).toLocaleString('default', { month: 'short' });
         monthlyLoginCounts[month] = (monthlyLoginCounts[month] || 0) + 1;
-        
+
         if (login.status === 'active') {
           monthlyAttendanceRates[month] = (monthlyAttendanceRates[month] || 0) + 1;
         }
@@ -128,32 +128,9 @@ function StaffReports() {
 
       {/* Staff Table Section */}
       <div className='p-4'>
-        <Card className="w-full">
-          <CardHeader className="pb-2 flex flex-row justify-between items-center w-full">
-            <CardTitle className='w-full'>
-              <div className='flex w-full justify-between items-center'>
-                <h1>Staff Overview</h1>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline">Roles</Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56">
-                    <DropdownMenuLabel>Filter Roles</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem>Staff</DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>Admin</DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem>Store Manager</DropdownMenuCheckboxItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <StaffTable data={users?.filter(user => 
-              ['Staff', 'Admin', 'StoreManager'].includes(user.role)
-            )} />
-          </CardContent>
-        </Card>
+        <StaffTable data={users?.filter(user =>
+          ['Staff', 'Admin', 'StoreManager'].includes(user.role)
+        )} />
       </div>
     </div>
   )

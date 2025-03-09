@@ -23,12 +23,6 @@ export function calculateSessionValues(numberOfPlayers, settings) {
     pricePerPlayer = pricing.group_players.price_per_player;
   }
 
-  console.log("Price calculation:", {
-    numberOfPlayers,
-    pricePerPlayer,
-    totalAmount: pricePerPlayer * numberOfPlayers
-  });
-
   const totalAmount = pricePerPlayer * numberOfPlayers;
 
   // Calculate GG Points
@@ -44,4 +38,15 @@ export function calculateSessionValues(numberOfPlayers, settings) {
 
   console.log("calculateSessionValues result:", result);
   return result;
+}
+
+export function calculateSessionClosePrice({ ggPoints, settings, total_amount }) {
+  // Calculate GG Points
+  const ggConfig = settings.ggpoints_config;
+  const maxGGPriceToBeUsed = (total_amount * (ggConfig?.points_to_rupee_ratio || 1)) * 0.5;
+  const ggPrice = Math.floor(ggPoints / (ggConfig?.points_to_rupee_ratio || 1));
+  return {
+    ggPrice,
+    maxGGPriceToBeUsed
+  }
 }

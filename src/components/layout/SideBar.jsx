@@ -3,7 +3,6 @@
 import {
 	Sidebar,
 	SidebarContent,
-	SidebarFooter,
 	SidebarHeader,
 } from "@/components/ui/sidebar"
 import { Gamepad2 } from "lucide-react";

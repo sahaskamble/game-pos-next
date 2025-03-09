@@ -2,7 +2,6 @@
 
 import { useState, useEffect, use } from "react";
 import { useCollection } from "@/lib/hooks/useCollection";
-// import { useAuth } from "@/lib/hooks/useAuth";
 import { useAuth } from "@/lib/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,96 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Check } from "lucide-react";
+import { Search, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import pb from "@/lib/pocketbase";
 import { calculateSessionValues } from "@/lib/utils/calculateSessionValues";
 import { toast } from "@/components/ui/sonner";  // or whatever toast library you're using
-
-const DURATION_OPTIONS = [
-  { value: 1, label: "1 Hour" },
-  { value: 2, label: "2 Hours" },
-  { value: 3, label: "3 Hours" },
-  { value: 4, label: "4 Hours" },
-  { value: 5, label: "5 Hours" },
-  { value: 6, label: "6 Hours" },
-];
-
-function AddCustomerDialog({ onCustomerAdd }) {
-  const [newCustomer, setNewCustomer] = useState({
-    customer_name: "",
-    phone: "",
-    email: "",
-  });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const created = await pb.collection("customers").create(newCustomer);
-      onCustomerAdd(created);
-      return created;
-    } catch (error) {
-      console.error("Error creating customer:", error);
-    }
-  };
-
-  return (
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Add New Customer</DialogTitle>
-      </DialogHeader>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="customer_name">Name</Label>
-          <Input
-            id="customer_name"
-            value={newCustomer.customer_name}
-            onChange={(e) =>
-              setNewCustomer((prev) => ({
-                ...prev,
-                customer_name: e.target.value,
-              }))
-            }
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="phone">Phone</Label>
-          <Input
-            id="phone"
-            value={newCustomer.phone}
-            onChange={(e) =>
-              setNewCustomer((prev) => ({ ...prev, phone: e.target.value }))
-            }
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            value={newCustomer.email}
-            onChange={(e) =>
-              setNewCustomer((prev) => ({ ...prev, email: e.target.value }))
-            }
-          />
-        </div>
-        <Button type="submit" className="w-full">
-          Add Customer
-        </Button>
-      </form>
-    </DialogContent>
-  );
-}
 
 export default function BookingPage({ params }) {
   const { user } = useAuth(); // Add this line to get the authenticated user
@@ -118,15 +33,13 @@ export default function BookingPage({ params }) {
   const { data: customers, createItem: createCustomer } = useCollection("customers");
   const { data: snacks } = useCollection("snacks");
   const { data: settings } = useCollection("settings");
-  const { createItem: createSession, updateItem: updateSession } = useCollection("sessions");
+  const { createItem: createSession } = useCollection("sessions");
   const { createItem: createSessionSnack } = useCollection("session_snack");
 
   useEffect(() => {
     console.log("Current settings:", settings);
   }, [settings]);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [formData, setFormData] = useState({
     customer_id: "",
     game_id: "",
@@ -154,14 +67,6 @@ export default function BookingPage({ params }) {
     setFormData(prev => ({
       ...prev,
       no_of_players: Math.max(1, Math.min(value, device?.[0]?.max_players || 4))
-    }));
-  };
-
-  const handleDurationChange = (value) => {
-    const duration = parseInt(value) || 1;
-    setFormData(prev => ({
-      ...prev,
-      duration: duration
     }));
   };
 
@@ -383,7 +288,7 @@ export default function BookingPage({ params }) {
       try {
         const customer = await pb.collection('customers').getOne(customerId);
         const currentRewards = customer.total_rewards || 0;
-        
+
         await pb.collection('customers').update(customerId, {
           total_rewards: currentRewards + calculations.ggPoints
         });
@@ -456,81 +361,6 @@ export default function BookingPage({ params }) {
     }
   }, [device]);
 
-  const handleExtendSession = async () => {
-    try {
-      const additionalAmount = (calculations.baseAmount / formData.duration) * extensionHours;
-
-      // Update session
-      const updatedSession = await pb.collection('sessions').update(currentSession.id, {
-        duration: currentSession.duration + extensionHours,
-        total_amount: currentSession.total_amount + additionalAmount
-      });
-
-      toast.success("Session extended successfully");
-      setShowExtendDialog(false);
-      router.refresh();
-    } catch (error) {
-      console.error("Error extending session:", error);
-      toast.error("Failed to extend session");
-    }
-  };
-
-  const handleAddSnacksToSession = async (selectedSnacks) => {
-    try {
-      // Calculate new snacks total
-      const newSnacksTotal = selectedSnacks.reduce((acc, snack) => {
-        return acc + (snack.price * snack.quantity);
-      }, currentSession.snacks_total || 0);
-
-      // Update session with new total
-      await pb.collection('sessions').update(currentSession.id, {
-        snacks_total: newSnacksTotal,
-        total_amount: currentSession.total_amount + newSnacksTotal
-      });
-
-      // Create session_snack entries
-      for (const snack of selectedSnacks) {
-        await createSessionSnack({
-          session_id: currentSession.id,
-          snack_id: snack.id,
-          quantity: snack.quantity,
-          price: snack.price * snack.quantity,
-          branch_id: user.branch_id, // Add branch_id
-          user_id: user.id, // Add user_id
-        });
-      }
-
-      toast.success("Snacks added successfully");
-      setShowAddSnackDialog(false);
-      router.refresh();
-    } catch (error) {
-      console.error("Error adding snacks:", error);
-      toast.error("Failed to add snacks");
-    }
-  };
-
-  const handleCloseSession = async () => {
-    try {
-      // Update session status
-      await pb.collection('sessions').update(currentSession.id, {
-        status: "Completed",
-        session_out: new Date().toISOString()
-      });
-
-      // Update device status
-      await pb.collection('devices').update(deviceId, {
-        status: "Open",
-        current_session: null
-      });
-
-      toast.success("Session closed successfully");
-      router.push("/dashboard");
-    } catch (error) {
-      console.error("Error closing session:", error);
-      toast.error("Failed to close session");
-    }
-  };
-
   return (
     <div className="p-8">
       <Card className="max-w-full md:max-w-2xl mx-auto p-6">
@@ -552,6 +382,7 @@ export default function BookingPage({ params }) {
                     setFormData(prev => ({ ...prev, customer_id: "" }));
                   }}
                   className="pr-8"
+                  placeholder='eg; John Doe'
                 />
                 <Search className="absolute right-2 top-2.5 h-5 w-5 text-gray-400" />
 
@@ -590,6 +421,9 @@ export default function BookingPage({ params }) {
                   }));
                   setFormData(prev => ({ ...prev, customer_id: "" }));
                 }}
+                placeholder='eg; 1234567890'
+                maxLength={10}
+                minLength={10}
               />
             </div>
 
@@ -606,21 +440,24 @@ export default function BookingPage({ params }) {
             )}
           </div>
 
-          <Select
-            value={formData.game_id}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, game_id: value }))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select Game" />
-            </SelectTrigger>
-            <SelectContent>
-              {games?.map(game => (
-                <SelectItem key={game.id} value={game.id}>
-                  {game.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Label htmlFor="game">Game</Label>
+            <Select
+              value={formData.game_id}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, game_id: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Game" />
+              </SelectTrigger>
+              <SelectContent>
+                {games?.map(game => (
+                  <SelectItem key={game.id} value={game.id}>
+                    {game.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Number of Players Input */}
           <div className="space-y-2">
@@ -713,52 +550,20 @@ export default function BookingPage({ params }) {
             </div>
           </div>
 
-          <Select
-            value={formData.payment_mode}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, payment_mode: value }))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select Payment Mode" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Cash">Cash</SelectItem>
-              <SelectItem value="Upi">UPI</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Discount Section */}
           <div className="space-y-2">
+            <Label htmlFor="payment_mode">Payment Mode</Label>
             <Select
-              value={formData.discount_type}
-              onValueChange={(value) => handleDiscountChange(value, 0)}
+              value={formData.payment_mode}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, payment_mode: value }))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select Discount Type" />
+                <SelectValue placeholder="Select Payment Mode" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="percentage">Percentage</SelectItem>
-                <SelectItem value="amount">Amount</SelectItem>
+                <SelectItem value="Cash">Cash</SelectItem>
+                <SelectItem value="Upi">UPI</SelectItem>
               </SelectContent>
             </Select>
-
-            {formData.discount_type === 'percentage' ? (
-              <Input
-                type="number"
-                placeholder="Discount Percentage"
-                value={formData.discount_percentage}
-                onChange={(e) => handleDiscountChange('percentage', e.target.value)}
-                min={0}
-                max={100}
-              />
-            ) : (
-              <Input
-                type="number"
-                placeholder="Discount Amount"
-                value={formData.discount_amount}
-                onChange={(e) => handleDiscountChange('amount', e.target.value)}
-                min={0}
-              />
-            )}
           </div>
 
           <div className="space-y-2 border-t pt-4">
@@ -769,10 +574,6 @@ export default function BookingPage({ params }) {
             <div className="flex justify-between">
               <span>Snacks Total:</span>
               <span>₹{calculations.snacksTotal}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Discount:</span>
-              <span>₹{calculations.discountAmount.toFixed(0)}</span>
             </div>
             <div className="flex justify-between font-bold">
               <span>Total Amount:</span>

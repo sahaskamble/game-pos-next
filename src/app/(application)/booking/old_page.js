@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useCollection } from "@/lib/hooks/useCollection";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,6 @@ export default function BookingPage() {
   const { data: sessions, updateItem: updateSession } = useCollection("sessions");
   const { data: snacks } = useCollection("snacks");
   const { createItem: createSessionSnack } = useCollection("session_snack");
-  const { data: settings } = useCollection("settings", { expand: 'branch_id' });
 
   // Dialog states
   const [showExtendDialog, setShowExtendDialog] = useState(false);
@@ -50,7 +49,9 @@ export default function BookingPage() {
     discount_type: "percentage",
     discount_percentage: 0,
     discount_amount: 0,
-    no_of_players: 1
+    no_of_players: 1,
+    duration_unit: "minutes",
+    duration: 15
   });
 
   // Add these new states
@@ -63,7 +64,7 @@ export default function BookingPage() {
 
   const handleExtendSession = async (device) => {
     try {
-      const session = device.expand.current_session;
+      const session = sessions.find((session) => session.device_id === device.id);
 
       // Update session with new calculations and number of players
       const updatedSession = await pb.collection('sessions').update(session.id, {
@@ -182,18 +183,21 @@ export default function BookingPage() {
   };
 
   // Add new function to handle final session close
-  const handleFinalSessionClose = async (pointsToUse) => {
+  const handleFinalSessionClose = async (formData) => {
     try {
       const { session, device, customerPoints } = selectedSessionForClose;
 
       // Calculate final amount after points redemption
-      const finalAmount = session.total_amount - pointsToUse;
+      const finalAmount = session.total_amount - formData.pointsToUse;
 
       // Update session
       await updateSession(session.id, {
         status: "Closed",
         session_out: new Date().toISOString(),
-        rewardPointsUsed: pointsToUse,
+        rewardPointsUsed: formData.pointsToUse,
+        discount_type: formData.discount_type,
+        discount_percentage: formData.discount_percentage,
+        discount_amount: formData.discountAmount,
         amount_paid: finalAmount
       });
 
@@ -203,11 +207,11 @@ export default function BookingPage() {
       });
 
       // If points were used, create a debit entry in point_logging
-      if (pointsToUse > 0) {
+      if (formData.pointsToUse > 0) {
         await pb.collection('point_logging').create({
           customer_id: session.customer_id,
           branch_id: user.branch_id,
-          amount: pointsToUse,
+          amount: formData.pointsToUse,
           type: 'debit'
         });
       }
@@ -222,7 +226,6 @@ export default function BookingPage() {
           type: 'credit'
         });
       }
-
       setShowGGPointsDialog(false);
       setSelectedSessionForClose(null);
       toast.success("Session closed successfully");
@@ -266,7 +269,7 @@ export default function BookingPage() {
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {devices.map((device) => (
-          <Card key={device.id} className="p-4 bg-gray-800">
+          <Card key={device.id} className="p-4">
             <CardTitle className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 {device.type === 'PS' ? (
@@ -433,55 +436,17 @@ export default function BookingPage() {
                 <Input
                   type="number"
                   min="1"
-                  value={extensionHours}
-                  onChange={(e) => setExtensionHours(parseInt(e.target.value) || 1)}
+                  value={FormData}
+                  onChange={(e) => setExtensionFormData({ ...extensionFormData, duration: Number(e?.target?.value) || 0 })}
                 />
               </div>
 
-              {/* Discount Section */}
-              <div className="space-y-2">
-                <Select
-                  value={extensionFormData.discount_type}
-                  onValueChange={(value) => handleDiscountChange(value, 0)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Discount Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="percentage">Percentage</SelectItem>
-                    <SelectItem value="amount">Amount</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {extensionFormData.discount_type === 'percentage' ? (
-                  <Input
-                    type="number"
-                    placeholder="Discount Percentage"
-                    value={extensionFormData.discount_percentage}
-                    onChange={(e) => handleDiscountChange('percentage', e.target.value)}
-                    min={0}
-                    max={100}
-                  />
-                ) : (
-                  <Input
-                    type="number"
-                    placeholder="Discount Amount"
-                    value={extensionFormData.discount_amount}
-                    onChange={(e) => handleDiscountChange('amount', e.target.value)}
-                    min={0}
-                  />
-                )}
-              </div>
 
               {/* Calculations Summary */}
               <div className="space-y-2 border-t pt-4">
                 <div className="flex justify-between">
                   <span>Base Amount:</span>
                   <span>₹{calculations.baseAmount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Discount:</span>
-                  <span>₹{calculations.discountAmount}</span>
                 </div>
                 <div className="flex justify-between font-bold">
                   <span>Total Amount:</span>

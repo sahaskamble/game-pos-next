@@ -131,6 +131,8 @@ export default function Inventory() {
     },
   };
 
+  // console.log(collections.devices.fields)
+
   return (
     <div className="container px-8 mx-auto py-10">
       <div className="flex items-center justify-between mb-4">

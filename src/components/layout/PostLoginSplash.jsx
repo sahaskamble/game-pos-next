@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { splashScreen } from "@/constants/main";
 
 export default function PostLoginSplash() {
   const [showSplash, setShowSplash] = useState(true);
@@ -26,7 +27,7 @@ export default function PostLoginSplash() {
         playsInline
         className="w-full h-full object-contain"
       >
-        <source src="/GG_LOGO_ANIMATION.mp4" type="video/mp4" />
+        <source src={splashScreen} type="video/mp4" />
         Your browser does not support the video tag.
       </video>
     </div>

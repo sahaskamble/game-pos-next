@@ -87,28 +87,62 @@ export default function Dashboard() {
       });
 
       // Existing chart data preparation...
-      const last7DaysData = sessions
-        .filter(session => session.status === "Closed")
+      const last24HoursData = sessions
+        .filter(session => {
+          const sessionDate = new Date(session.session_in);
+          const twentyFourHoursAgo = new Date();
+          twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+          return session.status === "Closed" && sessionDate >= twentyFourHoursAgo;
+        })
         .reduce((acc, session) => {
-          const date = new Date(session.session_out).toLocaleDateString();
-          const existingDay = acc.find(item => item.date === date);
-
-          if (existingDay) {
-            existingDay.revenue += session.total_amount || 0;
-            existingDay.sessions += 1;
+          const hour = new Date(session.session_in).getHours();
+          const hourKey = `${hour}:00`;
+          
+          const existingHour = acc.find(item => item.hour === hourKey);
+          if (existingHour) {
+            existingHour.revenue += session.total_amount || 0;
+            existingHour.sessions += 1;
+            existingHour.customers += 1;
           } else {
             acc.push({
-              date,
+              hour: hourKey,
               revenue: session.total_amount || 0,
-              sessions: 1
+              sessions: 1,
+              customers: 1
             });
           }
           return acc;
-        }, [])
-        .slice(-7)
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
+        }, []);
 
-      setChartData(last7DaysData);
+      // Fill in missing hours with zero values
+      const fullDayData = Array.from({ length: 24 }, (_, i) => {
+        const hour = `${i}:00`;
+        const existingData = last24HoursData.find(item => item.hour === hour);
+        return existingData || {
+          hour,
+          revenue: 0,
+          sessions: 0,
+          customers: 0
+        };
+      }).sort((a, b) => {
+        return parseInt(a.hour) - parseInt(b.hour);
+      });
+
+      // Find peak hour
+      const peakHour = fullDayData.reduce((peak, current) => 
+        current.customers > (peak?.customers || 0) ? current : peak
+      , null);
+
+      setChartData(fullDayData);
+
+      // Add peak hour to stats
+      setStats(prevStats => ({
+        ...prevStats,
+        peakHour: {
+          time: peakHour?.hour,
+          customers: peakHour?.customers || 0
+        }
+      }));
     }
   }, [sessions, customers, games]);
 
@@ -148,31 +182,51 @@ export default function Dashboard() {
 
       <div className="w-full grid gap-4 grid-cols-1 md:grid-cols-5 md:grid-rows-1">
         <Card className="p-6 col-span-4 row-span-1">
-          <div className="text-xl font-bold mb-4">Revenue Trend</div>
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-xl font-bold">24 Hour Traffic</div>
+            <div className="text-sm text-muted-foreground">
+              Peak Hour: {stats.peakHour?.time} ({stats.peakHour?.customers} customers)
+            </div>
+          </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis
-                  dataKey="date"
+                  dataKey="hour"
                   className="text-sm text-muted-foreground"
                 />
                 <YAxis
                   className="text-sm text-muted-foreground"
+                  yAxisId="left"
                   tickFormatter={(value) => `₹${value}`}
+                />
+                <YAxis
+                  className="text-sm text-muted-foreground"
+                  yAxisId="right"
+                  orientation="right"
+                  tickFormatter={(value) => `${value}`}
                 />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       return (
                         <div className="rounded-lg border bg-background p-2 shadow-sm">
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-3 gap-2">
                             <div className="flex flex-col">
                               <span className="text-[0.70rem] uppercase text-muted-foreground">
                                 Revenue
                               </span>
                               <span className="font-bold text-muted-foreground">
                                 ₹{payload[0].value}
+                              </span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                Customers
+                              </span>
+                              <span className="font-bold text-muted-foreground">
+                                {payload[2].value}
                               </span>
                             </div>
                             <div className="flex flex-col">
@@ -191,6 +245,7 @@ export default function Dashboard() {
                   }}
                 />
                 <Line
+                  yAxisId="left"
                   type="monotone"
                   dataKey="revenue"
                   stroke="#8884d8"
@@ -198,9 +253,18 @@ export default function Dashboard() {
                   dot={false}
                 />
                 <Line
+                  yAxisId="right"
                   type="monotone"
                   dataKey="sessions"
                   stroke="#82ca9d"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="customers"
+                  stroke="#ffc658"
                   strokeWidth={2}
                   dot={false}
                 />

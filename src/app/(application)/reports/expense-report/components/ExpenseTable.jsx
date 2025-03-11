@@ -27,6 +27,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PDFExport } from "@/components/Table2PDF";
+import { CSVExport } from "@/components/Table2CSV";
 
 export function ExpenseTable({ expenses }) {
   const [sorting, setSorting] = React.useState([]);
@@ -82,7 +84,7 @@ export function ExpenseTable({ expenses }) {
           }[column.getIsSorted()] ?? null}
         </div>
       ),
-      cell: ({ row }) => `₹${row.original.amount.toLocaleString()}`,
+      cell: ({ row }) => `Rs. ${row.original.amount.toLocaleString()}`,
     },
     {
       accessorKey: "created_by",
@@ -113,14 +115,25 @@ export function ExpenseTable({ expenses }) {
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
+      <div className="flex items-center gap-4 py-4">
         <Input
           placeholder="Filter expenses..."
           value={(table.getColumn("description")?.getFilterValue() ?? "")}
           onChange={(event) =>
             table.getColumn("description")?.setFilterValue(event.target.value)
           }
-          className="max-w-sm"
+          className="min-w-sm w-full"
+        />
+        <PDFExport
+          data={expenses}
+          columns={columns}
+          fileName="Expenses_Report.pdf"
+          title="Expenses List"
+        />
+        <CSVExport
+          data={expenses}
+          columns={columns}
+          fileName="Expenses_Report.csv"
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -156,7 +169,7 @@ export function ExpenseTable({ expenses }) {
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id}>
-                    {header.isPlaceholder ? null : 
+                    {header.isPlaceholder ? null :
                       flexRender(
                         header.column.columnDef.header,
                         header.getContext()

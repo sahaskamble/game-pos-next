@@ -27,13 +27,26 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { PDFExport } from "@/components/Table2PDF";
+import { CSVExport } from "@/components/Table2CSV";
 
 function StaffTable({ data = [] }) {
   const [sorting, setSorting] = React.useState([]);
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
+
+  // Get unique branches from all staff members
+  const uniqueBranches = React.useMemo(() => {
+    const branches = new Set();
+    data.forEach(staff => {
+      if (staff.expand?.branch_id) {
+        staff.expand.branch_id.forEach(branch => {
+          branches.add(branch.name);
+        });
+      }
+    });
+    return Array.from(branches).sort();
+  }, [data]);
 
   const columns = [
     {
@@ -43,28 +56,14 @@ function StaffTable({ data = [] }) {
           className="cursor-pointer select-none flex items-center"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
-          Staff Member
+          Username
           {{
             asc: " 🔼",
             desc: " 🔽",
           }[column.getIsSorted()] ?? null}
         </div>
       ),
-      cell: ({ row }) => (
-        <div className="flex items-center gap-3">
-          <Avatar>
-            <AvatarFallback>
-              {row.original.username?.charAt(0).toUpperCase() || 'U'}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <div className="font-medium">{row.original.username || 'Unknown'}</div>
-            <div className="text-sm text-muted-foreground">
-              {row.original.email || 'No email'}
-            </div>
-          </div>
-        </div>
-      )
+      cell: ({ row }) => row.original.username || 'Unknown'
     },
     {
       accessorKey: "role",
@@ -80,28 +79,53 @@ function StaffTable({ data = [] }) {
           }[column.getIsSorted()] ?? null}
         </div>
       ),
+      cell: ({ row }) => row.original.role || 'Unassigned'
     },
     {
-      accessorKey: "branch_id",
-      header: "Branch",
-      cell: ({ row }) => (
-        <div className="flex flex-wrap gap-1">
-          {row.original.expand?.branch_id?.length > 0 ? (
-            row.original.expand.branch_id.map((branch, index) => (
-              <Badge
-                key={index}
-                variant="secondary"
-                className="mr-1"
-              >
-                {branch.name}
-              </Badge>
-            ))
-          ) : (
-            'Not Assigned'
-          )}
+      accessorKey: "daysPresent",
+      header: ({ column }) => (
+        <div
+          className="cursor-pointer select-none flex items-center"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Days Present
+          {{
+            asc: " 🔼",
+            desc: " 🔽",
+          }[column.getIsSorted()] ?? null}
         </div>
-      )
-    }
+      ),
+      cell: ({ row }) => row.original.daysPresent || '0'
+    },
+    {
+      accessorKey: "daysAbsent",
+      header: ({ column }) => (
+        <div
+          className="cursor-pointer select-none flex items-center"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Days Absent
+          {{
+            asc: " 🔼",
+            desc: " 🔽",
+          }[column.getIsSorted()] ?? null}
+        </div>
+      ),
+      cell: ({ row }) => row.original.daysAbsent || '0'
+    },
+    // Create a separate column for each branch
+    ...uniqueBranches.map(branchName => ({
+      id: `branch_${branchName}`,
+      header: branchName,
+      accessorFn: (row) => {
+        if (!row.expand?.branch_id) return false;
+        return row.expand.branch_id.some(branch => branch.name === branchName);
+      },
+      cell: ({ row }) => {
+        const hasAccess = row.getValue(`branch_${branchName}`);
+        return hasAccess ? 'Access' : 'Denied';
+      },
+    })),
   ];
 
   const table = useReactTable({
@@ -130,7 +154,18 @@ function StaffTable({ data = [] }) {
           onChange={(event) =>
             table.getColumn("username")?.setFilterValue(event.target.value)
           }
-          className="max-w-sm"
+          className="min-w-sm"
+        />
+        <PDFExport
+          data={data}
+          columns={columns}
+          fileName="Staff_Report.pdf"
+          title="Staff List"
+        />
+        <CSVExport
+          data={data}
+          columns={columns}
+          fileName="Staff_Report.csv"
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -152,7 +187,9 @@ function StaffTable({ data = [] }) {
                       column.toggleVisibility(!!value)
                     }
                   >
-                    {column.id}
+                    {column.id.startsWith('branch_')
+                      ? column.id.replace('branch_', '')
+                      : column.id}
                   </DropdownMenuCheckboxItem>
                 );
               })}
@@ -166,7 +203,7 @@ function StaffTable({ data = [] }) {
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id}>
-                    {header.isPlaceholder ? null : 
+                    {header.isPlaceholder ? null :
                       flexRender(
                         header.column.columnDef.header,
                         header.getContext()

@@ -1,139 +1,125 @@
 'use client';
 
-import React, { useState, useEffect } from 'react'
-import { StatsCard } from './components/Stats';
-import { ChartComponent } from './components/Chart';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from 'react';
 import StaffTable from './components/Table';
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useCollection } from "@/lib/hooks/useCollection";
+import { AttendanceDistributionChart, RoleDistributionChart } from './components/Charts';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import pb from '@/lib/pocketbase';
 
-function StaffReports() {
-  const { data: users } = useCollection("users");
-  const { data: staffLogins } = useCollection("staff_logins");
-  const { data: branches } = useCollection("branches");
-
-  const [staffStats, setStaffStats] = useState({
-    total: 0,
-    present: 0,
-    onLeave: 0,
-    attendance: 0
+export default function StaffReport() {
+  const [staffData, setStaffData] = useState([]);
+  const [stats, setStats] = useState({
+    totalStaff: 0,
+    averageAttendance: 0,
+    excellentAttendance: 0,
+    poorAttendance: 0,
   });
-  const [attendanceData, setAttendanceData] = useState([]);
-  const [loginData, setLoginData] = useState([]);
-
-  // Define all months
-  const allMonths = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-  ];
 
   useEffect(() => {
-    if (users && staffLogins) {
-      // Filter only staff users (excluding SuperAdmin)
-      const staffUsers = users.filter(user =>
-        ['Staff', 'Admin', 'StoreManager'].includes(user.role)
-      );
+    async function fetchData() {
+      try {
+        // Fetch staff members with their branch information
+        const staff = await pb.collection('users').getFullList({
+          expand: 'branch_id',
+        });
 
-      // Get today's date in ISO format
-      const today = new Date().toISOString().split('T')[0];
+        // Fetch login records for the last 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      // Get active logins for today
-      const todayLogins = staffLogins.filter(login => {
-        const loginDate = new Date(login.login_time).toISOString().split('T')[0];
-        return loginDate === today && login.status === "active";
-      });
+        const loginRecords = await pb.collection('staff_logins').getFullList({
+          filter: `created >= "${thirtyDaysAgo.toISOString()}"`,
+        });
 
-      // Calculate stats
-      const total = staffUsers.length;
-      const present = todayLogins.length;
+        // Calculate attendance for each staff member
+        const staffWithAttendance = staff.map(member => {
+          const userLogins = loginRecords.filter(log => log.user_id === member.id);
+          
+          // Get unique days when the user was present
+          const uniqueDays = new Set(
+            userLogins.map(log => new Date(log.created).toDateString())
+          );
+          
+          const daysPresent = uniqueDays.size;
+          const daysAbsent = 30 - daysPresent; // Assuming we're looking at 30 days
 
-      setStaffStats({
-        total,
-        present,
-        onLeave: 0, // Since we don't track leaves directly
-        attendance: total ? Math.round((present / total) * 100) : 0
-      });
+          return {
+            ...member,
+            daysPresent,
+            daysAbsent,
+          };
+        });
 
-      // Initialize data for all months with zero values
-      const monthlyLoginCounts = {};
-      const monthlyAttendanceRates = {};
+        // Calculate statistics
+        const totalStaff = staffWithAttendance.length;
+        const averageAttendance = staffWithAttendance.reduce((acc, staff) => acc + staff.daysPresent, 0) / totalStaff;
+        const excellentAttendance = staffWithAttendance.filter(staff => staff.daysPresent >= 25).length;
+        const poorAttendance = staffWithAttendance.filter(staff => staff.daysPresent < 15).length;
 
-      allMonths.forEach(month => {
-        monthlyLoginCounts[month] = 0;
-        monthlyAttendanceRates[month] = 0;
-      });
+        setStats({
+          totalStaff,
+          averageAttendance: Math.round(averageAttendance * 10) / 10,
+          excellentAttendance,
+          poorAttendance,
+        });
 
-      // Calculate monthly logins and attendance
-      staffLogins.forEach(login => {
-        const month = new Date(login.login_time).toLocaleString('default', { month: 'short' });
-        monthlyLoginCounts[month] = (monthlyLoginCounts[month] || 0) + 1;
-
-        if (login.status === 'active') {
-          monthlyAttendanceRates[month] = (monthlyAttendanceRates[month] || 0) + 1;
-        }
-      });
-
-      // Calculate attendance percentage and prepare chart data
-      const attendanceChartData = allMonths.map(month => ({
-        month,
-        value: monthlyLoginCounts[month] > 0
-          ? Math.round((monthlyAttendanceRates[month] / monthlyLoginCounts[month]) * 100)
-          : 0
-      }));
-
-      const loginChartData = allMonths.map(month => ({
-        month,
-        value: monthlyLoginCounts[month]
-      }));
-
-      setAttendanceData(attendanceChartData);
-      setLoginData(loginChartData);
+        setStaffData(staffWithAttendance);
+      } catch (error) {
+        console.error('Error fetching staff data:', error);
+      }
     }
-  }, [users, staffLogins]);
+
+    fetchData();
+  }, []);
 
   return (
-    <div className="flex flex-col w-full min-h-screen">
-      {/* Stats Cards */}
-      <div className="p-6">
-        <div className="grid auto-rows-min gap-4 md:grid-cols-4">
-          <StatsCard stats={staffStats} />
-        </div>
+    <div className="container mx-auto py-10 space-y-8">
+      <h1 className="text-2xl font-bold">Staff Report</h1>
+      
+      {/* Statistics Cards */}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalStaff}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Attendance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.averageAttendance} days</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Excellent Attendance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{stats.excellentAttendance}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Poor Attendance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{stats.poorAttendance}</div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-2 gap-4 p-4">
-        <ChartComponent
-          title="Monthly Attendance Rate"
-          data={attendanceData}
-          period="month"
-          showDetails={true}
-        />
-
-        <ChartComponent
-          title="Monthly Login Distribution"
-          data={loginData}
-          period="month"
-          showDetails={true}
-        />
+      {/* Charts */}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+        <AttendanceDistributionChart data={staffData} />
+        <RoleDistributionChart data={staffData} />
       </div>
 
-      {/* Staff Table Section */}
-      <div className='p-4'>
-        <StaffTable data={users?.filter(user =>
-          ['Staff', 'Admin', 'StoreManager'].includes(user.role)
-        )} />
-      </div>
+      {/* Table */}
+      <StaffTable data={staffData} />
     </div>
-  )
+  );
 }
-
-export default StaffReports;

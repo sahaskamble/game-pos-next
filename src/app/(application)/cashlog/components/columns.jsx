@@ -30,53 +30,71 @@ export const columns = [
     ),
   },
   {
-    accessorKey: "user",
-    header: "Added By",
-    cell: ({ row }) => row.original.expand?.user_id?.name
-  },
-  {
-    accessorKey: "withdraw_from_drawer",
-    header: "Withdrawals",
+    accessorKey: "amount",
+    header: "Amount",
     cell: ({ row }) => {
       const withdrawals = row.original.withdraw_from_drawer;
       if (!withdrawals?.amount) return "-";
 
       return (
-        <div className="flex gap-4">
-          <Badge variant="default" className="font-mono">
-            ₹{withdrawals.amount.toLocaleString()}
-          </Badge>
-          {withdrawals.description && (
-            <Badge variant="default" className="font-mono">
-              {withdrawals.description}
-            </Badge>
-          )}
-          {withdrawals.taken_by && (
-            <Badge variant="default" className="text-xs">
-              By: {withdrawals.taken_by}
-            </Badge>
-          )}
-        </div>
+        <Badge variant="outline" className="font-mono">
+          Rs.{withdrawals.amount.toLocaleString()}
+        </Badge>
       );
     },
+  },
+  {
+    accessorKey: "description",
+    header: "Description",
+    cell: ({ row }) => {
+      const withdrawals = row.original.withdraw_from_drawer;
+      if (!withdrawals?.amount) return "-";
+
+      return (
+        <Badge variant="outline">
+          {withdrawals.description.toLocaleString()}
+        </Badge>
+      );
+    },
+  },
+  {
+    accessorKey: "author",
+    header: "Taken By",
+    cell: ({ row }) => {
+      const withdrawals = row.original.withdraw_from_drawer;
+      if (!withdrawals?.amount) return "-";
+
+      return (
+        <Badge variant="outline">
+          {withdrawals.taken_by.toLocaleString()}
+        </Badge>
+      );
+    },
+  },
+  {
+    accessorKey: "user",
+    header: "Added By",
+    cell: ({ row }) => row.original.expand?.user_id?.username
   },
   {
     id: "actions",
     header: "Actions",
     cell: ({ row, table }) => {
       const meta = table.options.meta;
-
-      if (!meta?.isAdmin && !meta?.isSuperAdmin) return null;
+      
+      if (!meta?.isAdmin) {
+        return null;
+      }
 
       return (
         <div className="flex justify-end gap-2">
           <EditCashlogDialog
             cashlog={row.original}
-            onSuccess={meta?.onSuccess}
+            onSuccess={meta.onSuccess}
           />
           <DeleteCashlogDialog
             cashlog={row.original}
-            onSuccess={meta?.onSuccess}
+            onSuccess={meta.onSuccess}
           />
         </div>
       );

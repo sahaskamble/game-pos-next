@@ -27,6 +27,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { PDFExport } from "../Table2PDF";
+import { CSVExport } from "../Table2CSV";
 
 export function DataTable({
   data,
@@ -34,6 +36,7 @@ export function DataTable({
   loading,
   searchKey,
   searchPlaceholder = "Filter...",
+  meta, // Add meta to props
 }) {
   const [sorting, setSorting] = React.useState([]);
   const [columnFilters, setColumnFilters] = React.useState([]);
@@ -57,6 +60,7 @@ export function DataTable({
       columnVisibility,
       rowSelection,
     },
+    meta, // Add meta here to pass it to the table instance
   });
 
   if (loading) {
@@ -65,7 +69,7 @@ export function DataTable({
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
+      <div className="flex gap-4 justify-between items-center py-4">
         {searchKey && (
           <Input
             placeholder={searchPlaceholder}
@@ -73,9 +77,20 @@ export function DataTable({
             onChange={(event) =>
               table.getColumn(searchKey)?.setFilterValue(event.target.value)
             }
-            className="max-w-sm"
+            className='w-full'
           />
         )}
+        <PDFExport
+          data={data}
+          columns={columns}
+          fileName="Cashlog.pdf"
+          title="Cashlog List"
+        />
+        <CSVExport
+          data={data}
+          columns={columns}
+          fileName="Cashlog.csv"
+        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">
@@ -113,9 +128,9 @@ export function DataTable({
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
                   </TableHead>
                 ))}
               </TableRow>

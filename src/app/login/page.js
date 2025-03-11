@@ -3,7 +3,8 @@
 import { Gamepad2, Moon, Sun } from "lucide-react"
 import { LoginForm } from "@/components/login-form"
 import { useTheme } from "next-themes";
-import { CompanyName, loginBackground } from "@/constants/main";
+import { CompanyName, darkThemeLogo, lightThemeLogo, loginBackground } from "@/constants/main";
+import Image from "next/image";
 
 export default function LoginPage() {
   const { theme, setTheme } = useTheme();
@@ -26,12 +27,16 @@ export default function LoginPage() {
       <div className="grid min-h-svh lg:grid-cols-2">
         <div className="flex flex-col gap-4 p-6 md:p-10">
           <div className="flex justify-center gap-2 md:justify-start">
-            <a href="/login" className="flex items-center gap-2 font-medium">
-              <div
-                className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                <Gamepad2 />
-              </div>
-              {CompanyName}
+            <a href="/login" className="flex items-center gap-4 font-medium">
+              <Image
+                src={theme === 'light' ? lightThemeLogo : darkThemeLogo}
+                width={50}
+                height={50}
+                alt="Logo"
+              />
+              <h1 className="text-xl font-semibold">
+                {CompanyName}
+              </h1>
             </a>
           </div>
           <div className="flex flex-1 items-center justify-center">

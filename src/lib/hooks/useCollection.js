@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import pbService from '../services/pocketbase';
 import { toast } from 'sonner';
 
@@ -12,6 +12,7 @@ export function useCollection(collectionName, options) {
     try {
       const response = await pbService.getList(collectionName, 1, 50, options);
       setData(response.items);
+      setError(null);
     } catch (err) {
       setError(err);
       toast.error(`Error fetching ${collectionName}: ${err.message}`);
@@ -19,6 +20,16 @@ export function useCollection(collectionName, options) {
       setLoading(false);
     }
   };
+
+  const mutate = useCallback(async (newData) => {
+    if (newData) {
+      // If new data is provided, update the state directly
+      setData(newData);
+      return;
+    }
+    // Otherwise, fetch fresh data from the server
+    await fetchData();
+  }, [collectionName, options]);
 
   const createItem = async (itemData) => {
     try {
@@ -57,12 +68,13 @@ export function useCollection(collectionName, options) {
 
   useEffect(() => {
     fetchData();
-  }, [collectionName]);
+  }, [collectionName, JSON.stringify(options)]);
 
   return {
     data,
     loading,
     error,
+    mutate,
     fetchData,
     createItem,
     updateItem,

@@ -11,15 +11,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { pb } from "@/lib/pocketbase";
+import { useCollection } from "@/lib/hooks/useCollection";
 import { Trash2 } from "lucide-react";
 
 export function DeleteCashlogDialog({ cashlog, onSuccess }) {
+  const { deleteItem } = useCollection("cashlog");
   const [open, setOpen] = useState(false);
 
   const handleDelete = async () => {
     try {
-      await pb.collection("cashlog").delete(cashlog.id);
+      await deleteItem(cashlog.id);
       toast.success("Cash log entry deleted successfully");
       setOpen(false);
       onSuccess?.();

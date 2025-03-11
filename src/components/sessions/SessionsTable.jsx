@@ -40,6 +40,8 @@ import {
 } from "@/components/ui/dialog";
 import { useState } from "react";
 import InvoiceDownload from "./InvoiceDownload";
+import { CSVExport } from "../Table2CSV";
+import { PDFExport } from "../Table2PDF";
 
 export function SessionsTable({ data = [], loading, onEdit, onDelete }) {
   const [sorting, setSorting] = React.useState([]);
@@ -67,13 +69,13 @@ export function SessionsTable({ data = [], loading, onEdit, onDelete }) {
     {
       accessorKey: "session_in",
       header: "Session In",
-      cell: ({ row }) => 
+      cell: ({ row }) =>
         row.original.session_in ? format(new Date(row.original.session_in), 'PPp') : '-',
     },
     {
       accessorKey: "session_out",
       header: "Session Out",
-      cell: ({ row }) => 
+      cell: ({ row }) =>
         row.original.session_out ? format(new Date(row.original.session_out), 'PPp') : '-',
     },
     {
@@ -89,7 +91,7 @@ export function SessionsTable({ data = [], loading, onEdit, onDelete }) {
     {
       accessorKey: "total_amount",
       header: "Amount",
-      cell: ({ row }) => `₹${row.original.total_amount || 0}`,
+      cell: ({ row }) => `Rs. ${row.original.total_amount || 0}`,
     },
     {
       id: "actions",
@@ -143,14 +145,25 @@ export function SessionsTable({ data = [], loading, onEdit, onDelete }) {
   return (
     <>
       <div className="w-full">
-        <div className="flex items-center py-4">
+        <div className="flex items-center gap-4 py-4">
           <Input
             placeholder="Filter by customer..."
             value={(table.getColumn("customer")?.getFilterValue() ?? "")}
             onChange={(event) =>
               table.getColumn("customer")?.setFilterValue(event.target.value)
             }
-            className="max-w-sm"
+            className="min-w-sm"
+          />
+          <PDFExport
+            data={data}
+            columns={columns}
+            fileName="Sessions.pdf"
+            title="Session History"
+          />
+          <CSVExport
+            data={data}
+            columns={columns}
+            fileName="Sessions.csv"
           />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -189,9 +202,9 @@ export function SessionsTable({ data = [], loading, onEdit, onDelete }) {
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   ))}
                 </TableRow>

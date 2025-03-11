@@ -27,8 +27,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { pb } from "@/lib/pocketbase";
 import { Pencil } from "lucide-react";
+import { useCollection } from "@/lib/hooks/useCollection";
 
 const CATEGORIES = [
   "Repairs / Maintainence",
@@ -38,6 +38,7 @@ const CATEGORIES = [
 ];
 
 export function EditCashlogDialog({ cashlog, onSuccess }) {
+  const { updateItem: editEntry } = useCollection("cashlog");
   const [open, setOpen] = useState(false);
 
   const form = useForm({
@@ -54,11 +55,11 @@ export function EditCashlogDialog({ cashlog, onSuccess }) {
   const onSubmit = async (data) => {
     try {
       // Update the cashlog entry
-      await pb.collection("cashlog").update(cashlog.id, {
+      await editEntry(cashlog.id, {
         category: data.category,
         withdraw_from_drawer: data.withdraw_from_drawer,
       });
-      
+
       toast.success("Cash log entry updated successfully");
       setOpen(false);
       onSuccess?.();
@@ -111,11 +112,11 @@ export function EditCashlogDialog({ cashlog, onSuccess }) {
                 <FormItem>
                   <FormLabel>Withdrawal Amount</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="number" 
+                    <Input
+                      type="number"
                       step="0.01"
                       placeholder="Enter withdrawal amount"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -129,9 +130,9 @@ export function EditCashlogDialog({ cashlog, onSuccess }) {
                 <FormItem>
                   <FormLabel>Withdrawal Description</FormLabel>
                   <FormControl>
-                    <Input 
+                    <Input
                       placeholder="Enter withdrawal description"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -145,9 +146,9 @@ export function EditCashlogDialog({ cashlog, onSuccess }) {
                 <FormItem>
                   <FormLabel>Taken By</FormLabel>
                   <FormControl>
-                    <Input 
+                    <Input
                       placeholder="Enter name of person who took the money"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />

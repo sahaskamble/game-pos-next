@@ -14,7 +14,6 @@ import PostLoginSplash from "@/components/layout/PostLoginSplash";
 
 export function LoginForm({ className, ...props }) {
   const { branches, login } = useAuth();
-  const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [branch, setBranch] = useState('');

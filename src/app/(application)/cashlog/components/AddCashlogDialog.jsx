@@ -39,19 +39,17 @@ const CATEGORIES = [
 ];
 
 export function AddCashlogDialog({ onSuccess }) {
+  const { createItem: addToCashlog } = useCollection("cashlog");
+  const { createItem: addToCashinDrawer } = useCollection("cashIndrawer");
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
-  const { createItem: createCashlog } = useCollection("cashlog");
-  const { data: cashDrawerEntries } = useCollection("cashIndrawer", {
-    sort: "-created",
-    filter: `user_id = "${user?.id}"`,
-  });
 
   const form = useForm({
     defaultValues: {
+      cash_in_drawer: "",
       category: "",
       withdraw_from_drawer: {
-        amount: 0,
+        amount: "",
         description: "",
         taken_by: ""
       }
@@ -60,46 +58,38 @@ export function AddCashlogDialog({ onSuccess }) {
 
   const onSubmit = async (data) => {
     try {
-      // Get today's start timestamp
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // First create a cash drawer record
+      const drawerRecord = await addToCashinDrawer({
+        cash_in_drawer: parseFloat(data.cash_in_drawer),
+        user_id: user.id,
+        branch_id: Array.isArray(user.branch_id) ? user.branch_id[0] : user.branch_id,
+      });
 
-      // Find today's drawer entry
-      const todayDrawerEntry = cashDrawerEntries?.find(entry =>
-        new Date(entry.created) >= today
-      );
-
-      if (!todayDrawerEntry) {
-        throw new Error("No cash drawer entry found for today");
-      }
-
-      // Convert amount to number and ensure it's positive
-      const withdrawalAmount = Math.abs(Number(data.withdraw_from_drawer.amount));
-
-      // Create the cashlog entry with properly formatted data
+      // Then create the cashlog entry with the drawer reference
       const cashlogData = {
+        user_id: user.id,
+        branch_id: Array.isArray(user.branch_id) ? user.branch_id[0] : user.branch_id,
         category: data.category,
+        drawer_id: drawerRecord.id, // Changed to match schema field name
         withdraw_from_drawer: {
-          amount: withdrawalAmount,
-          description: data.withdraw_from_drawer.description,
-          taken_by: data.withdraw_from_drawer.taken_by
-        },
-        user_id: user.id,           // Change user_id to user
-        branch_id: user.branch_id,  // Change branch_id to branch
-        drawer_id: todayDrawerEntry.id,  // Change drawer_id to drawer
+          amount: parseFloat(data.withdraw_from_drawer.amount) || 0,
+          description: data.withdraw_from_drawer.description || "",
+          taken_by: data.withdraw_from_drawer.taken_by || ""
+        }
       };
 
-      console.log(cashlogData);
-
-      await createCashlog(cashlogData);
+      await addToCashlog(cashlogData);
 
       toast.success("Cash log entry created successfully");
       setOpen(false);
       form.reset();
-      onSuccess?.();
+      if (onSuccess) onSuccess();
     } catch (error) {
-      console.error("Creation error:", error);
-      toast.error(error.message || "Failed to create cash log entry");
+      console.error("Error details:", error);
+      if (error.data) {
+        console.error("Server response:", error.data);
+      }
+      toast.error("Failed to create cash log entry");
     }
   };
 
@@ -117,6 +107,25 @@ export function AddCashlogDialog({ onSuccess }) {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="cash_in_drawer"
+              rules={{ required: "Cash in drawer is required" }}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cash in Drawer</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="Enter amount"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="category"
@@ -145,7 +154,6 @@ export function AddCashlogDialog({ onSuccess }) {
             <FormField
               control={form.control}
               name="withdraw_from_drawer.amount"
-              rules={{ required: "Amount is required" }}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Withdrawal Amount</FormLabel>
@@ -153,7 +161,6 @@ export function AddCashlogDialog({ onSuccess }) {
                     <Input
                       type="number"
                       step="0.01"
-                      min="0"
                       placeholder="Enter withdrawal amount"
                       {...field}
                     />
@@ -165,7 +172,6 @@ export function AddCashlogDialog({ onSuccess }) {
             <FormField
               control={form.control}
               name="withdraw_from_drawer.description"
-              rules={{ required: "Description is required" }}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Withdrawal Description</FormLabel>
@@ -182,7 +188,6 @@ export function AddCashlogDialog({ onSuccess }) {
             <FormField
               control={form.control}
               name="withdraw_from_drawer.taken_by"
-              rules={{ required: "Taken by is required" }}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Taken By</FormLabel>

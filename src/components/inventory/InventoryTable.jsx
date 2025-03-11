@@ -13,7 +13,6 @@ import { ChevronDown, Pencil, Trash } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -36,7 +35,7 @@ export function InventoryTable({ data, loading, fields, onEdit, onDelete, canMod
 
   const columns = React.useMemo(() => {
     const baseColumns = fields.map(field => ({
-      accessorKey: field.name === "branch_id" ? "expand.branch_id.name" : field.name,
+      accessorKey: field.name === "branch_id" ? "branch_id.name" : field.name,
       header: ({ column }) => (
         <div
           className="cursor-pointer select-none flex items-center"
@@ -49,18 +48,6 @@ export function InventoryTable({ data, loading, fields, onEdit, onDelete, canMod
           }[column.getIsSorted()] ?? null}
         </div>
       ),
-      cell: ({ row }) => {
-        // Special handling for branch_id field
-        if (field.name === "branch_id") {
-          return (
-            <Badge variant="default">
-              {row.original.expand?.branch_id?.name || '-'}
-            </Badge>
-          );
-        }
-        // Default rendering for other fields
-        return row.getValue(field.name === "branch_id" ? "expand.branch_id.name" : field.name);
-      },
     }));
 
     if (!canModify) return baseColumns;
@@ -107,8 +94,6 @@ export function InventoryTable({ data, loading, fields, onEdit, onDelete, canMod
       columnVisibility,
     },
   });
-
-  console.log(table)
 
   if (loading) {
     return <div>Loading...</div>;

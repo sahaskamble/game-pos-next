@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useCollection } from "@/lib/hooks/useCollection";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Smartphone, Gamepad, Coffee } from "lucide-react";
+import { Plus, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { InventoryTable } from "@/components/inventory/InventoryTable";
 import { AddItemDialog } from "@/components/inventory/AddItemDialog";
 import { EditItemDialog } from "@/components/inventory/EditItemDialog";
@@ -61,6 +61,19 @@ export default function Inventory() {
     data: branches,
     loading: branchesLoading,
   } = useCollection("branches");
+
+  // Calculate snack inventory statistics
+  const snackStats = snacks?.reduce((stats, snack) => {
+    const quantity = snack.quanity || 0;
+    if (quantity === 0) {
+      stats.emptyStock++;
+    } else if (quantity <= 10) { // Assuming 10 is the low stock threshold
+      stats.lowStock++;
+    } else {
+      stats.availableStock++;
+    }
+    return stats;
+  }, { lowStock: 0, availableStock: 0, emptyStock: 0 }) || { lowStock: 0, availableStock: 0, emptyStock: 0 };
 
   const collections = {
     devices: {
@@ -131,8 +144,6 @@ export default function Inventory() {
     },
   };
 
-  // console.log(collections.devices.fields)
-
   return (
     <div className="container px-8 mx-auto py-10">
       <div className="flex items-center justify-between mb-4">
@@ -149,19 +160,22 @@ export default function Inventory() {
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3 mb-8">
         <StatsCard
-          title="Total Devices"
-          value={devices?.length || 0}
-          icon={Smartphone}
+          title="Low Stock"
+          value={snackStats.lowStock}
+          icon={AlertTriangle}
+          className="bg-yellow-50"
         />
         <StatsCard
-          title="Total Games"
-          value={games?.length || 0}
-          icon={Gamepad}
+          title="Available Stock"
+          value={snackStats.availableStock}
+          icon={CheckCircle2}
+          className="bg-green-50"
         />
         <StatsCard
-          title="Total Snacks"
-          value={snacks?.length || 0}
-          icon={Coffee}
+          title="Empty Stock"
+          value={snackStats.emptyStock}
+          icon={XCircle}
+          className="bg-red-50"
         />
       </div>
 

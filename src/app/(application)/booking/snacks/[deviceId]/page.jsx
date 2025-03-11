@@ -17,7 +17,7 @@ export default function SnackSessionPage({ params }) {
 
 	const { data: devices } = useCollection("devices");
 	const { data: sessions, updateItem: updateSession } = useCollection("sessions");
-	const { data: snacks } = useCollection("snacks");
+	const { data: snacks, updateItem: updateSnacksQuantity } = useCollection("snacks");
 	const { createItem: createSessionSnack } = useCollection("session_snack");
 	const { user } = useAuth();
 
@@ -82,7 +82,18 @@ export default function SnackSessionPage({ params }) {
 					branch_id: user.branch_id,
 					user_id: user.id,
 				});
-				console.log('Session Snack Add', sessionSnack)
+
+				// Update snack quantity in snacks collection
+				try {
+					const currentSnack = snacks.find((s) => s.id === snack.id);
+					const newQuantity = currentSnack.quanity - snack.quantity;
+					await updateSnacksQuantity(snack.id, {
+						quanity: newQuantity
+					});
+				} catch (error) {
+					console.error(`Error updating quantity for snack ${snack.id}:`, error);
+					toast.error(`Failed to update quantity for ${snack.name}`);
+				}
 			}
 
 			toast.success("Snacks added successfully");

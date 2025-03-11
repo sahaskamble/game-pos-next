@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import * as React from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -9,6 +9,9 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { ArrowUpDown } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -18,85 +21,125 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
 import { PDFExport } from "@/components/Table2PDF";
 import { CSVExport } from "@/components/Table2CSV";
 
-export function CustomerTable({ customers, sessions }) {
-  const [sorting, setSorting] = useState([]);
-  const [columnFilters, setColumnFilters] = useState([]);
-  const [columnVisibility, setColumnVisibility] = useState({});
+export function GameTable({ games, sessions }) {
+  const [sorting, setSorting] = React.useState([]);
+  const [columnFilters, setColumnFilters] = React.useState([]);
+  const [columnVisibility, setColumnVisibility] = React.useState({});
+
+  const getGameStats = (gameId) => {
+    const gameSessions = sessions.filter(s => s.game_id === gameId);
+    const totalPlaytime = gameSessions.reduce((sum, session) => sum + (session.duration || 0), 0);
+    const totalRevenue = gameSessions.reduce((sum, session) => sum + (session.total_amount || 0), 0);
+
+    return {
+      sessions: gameSessions.length,
+      averagePlaytime: gameSessions.length ? Math.round(totalPlaytime / gameSessions.length / 60) : 0,
+      revenue: totalRevenue
+    };
+  };
 
   const columns = [
     {
-      accessorKey: "customer_name",
-      header: "Name",
-    },
-    {
-      accessorKey: "customer_contact",
-      header: "Contact",
-    },
-    {
-      accessorKey: "expand.branch_id.name",
-      header: "Branch",
-      cell: ({ row }) => (
-        <div>
-          {row.original.expand?.branch_id?.name || 'Not Assigned'}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "isMember",
-      header: "Membership",
-      cell: ({ row }) => (
-        <div className={`font-medium ${row.original.isMember ? 'text-green-600' : 'text-red-600'}`}>
-          {row.original.isMember ? 'Member' : 'Non-Member'}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "total_visits",
-      header: "Total Visits",
-      cell: ({ row }) => row.original.total_visits || 0,
-    },
-    {
-      accessorKey: "total_rewards",
-      header: "Total Rewards",
-      cell: ({ row }) => row.original.total_rewards || 0,
-    },
-    {
-      accessorKey: "created",
-      header: "Joined Date",
-      cell: ({ row }) => format(new Date(row.original.created), 'MMM dd, yyyy'),
-    },
-    {
-      id: "totalSpent",
-      header: "Total Spent",
-      cell: ({ row }) => {
-        const customerSessions = sessions.filter(s => s.customer_id === row.original.id);
-        const totalSpent = customerSessions.reduce((sum, s) => sum + (s.total_amount || 0), 0);
-        return `Rs. ${totalSpent.toLocaleString()}`;
+      accessorKey: "name",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Game Name
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
       },
     },
     {
-      id: "sessionCount",
-      header: "Total Sessions",
+      accessorKey: "type",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Type
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => (
+        <Badge variant="secondary">
+          {row.original.type === 'PS' ? "Playstation" : 'VR Games'}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "sessions",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Total Sessions
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
       cell: ({ row }) => {
-        const sessionCount = sessions.filter(s => s.customer_id === row.original.id).length;
-        return sessionCount;
+        const stats = getGameStats(row.original.id);
+        return stats.sessions;
+      },
+    },
+    {
+      accessorKey: "averagePlaytime",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Avg. Playtime (hr)
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const stats = getGameStats(row.original.id);
+        return stats.averagePlaytime;
+      },
+    },
+    {
+      accessorKey: "revenue",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Total Revenue
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const stats = getGameStats(row.original.id);
+        return `Rs. ${stats.revenue.toLocaleString()}`;
       },
     },
   ];
 
   const table = useReactTable({
-    data: customers,
+    data: games,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -116,32 +159,36 @@ export function CustomerTable({ customers, sessions }) {
     <div className="w-full">
       <div className="flex items-center gap-4 py-4 justify-between">
         <Input
-          placeholder="Filter customers..."
-          value={(table.getColumn("customer_name")?.getFilterValue() ?? "")}
+          placeholder="Filter games..."
+          value={(table.getColumn("name")?.getFilterValue() ?? "")}
           onChange={(event) =>
-            table.getColumn("customer_name")?.setFilterValue(event.target.value)
+            table.getColumn("name")?.setFilterValue(event.target.value)
           }
-          className="min-w-sm"
+          className="max-w-full"
         />
         <PDFExport
-          data={customers}
+          data={games}
           columns={columns}
-          fileName="Customers_Report.pdf"
-          title="Customers List"
+          fileName="Games_Report.pdf"
+          title="Games List"
         />
         <CSVExport
-          data={customers}
+          data={games}
           columns={columns}
-          fileName="Customers_Report.csv"
+          fileName="Game_Report.csv"
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline">Columns</Button>
+            <Button variant="outline" className="ml-auto">
+              Columns
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {table
               .getAllColumns()
-              .filter((column) => column.getCanHide())
+              .filter(
+                (column) => column.getCanHide()
+              )
               .map((column) => {
                 return (
                   <DropdownMenuCheckboxItem
@@ -154,7 +201,7 @@ export function CustomerTable({ customers, sessions }) {
                   >
                     {column.id}
                   </DropdownMenuCheckboxItem>
-                );
+                )
               })}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -174,7 +221,7 @@ export function CustomerTable({ customers, sessions }) {
                           header.getContext()
                         )}
                     </TableHead>
-                  );
+                  )
                 })}
               </TableRow>
             ))}
@@ -182,13 +229,13 @@ export function CustomerTable({ customers, sessions }) {
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>

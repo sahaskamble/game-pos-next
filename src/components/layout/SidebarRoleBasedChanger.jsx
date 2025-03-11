@@ -16,7 +16,8 @@ import {
 	Receipt,
 	Users,
 	UserCog,
-	ChevronRight
+	ChevronRight,
+	Gamepad2
 } from "lucide-react";
 
 export default function RoleChanger({ role }) {
@@ -78,6 +79,11 @@ export default function RoleChanger({ role }) {
 						label: "Staff Report",
 						path: "/reports/staff-report",
 						icon: <UserCog className="w-4 h-4" />
+					},
+					{
+						label: "Game Report",
+						path: "/reports/games-report",
+						icon: <Gamepad2 className="w-4 h-4" />
 					},
 				]
 			},
@@ -197,11 +203,10 @@ function SidebarButton({ path, isActive, icon, children }) {
 	return (
 		<Link href={path} className="w-full">
 			<SidebarMenuButton
-				className={`w-full rounded-lg transition-colors duration-200 ${
-					isActive 
-						? "bg-primary/10 text-primary hover:bg-primary/15" 
+				className={`w-full rounded-lg transition-colors duration-200 ${isActive
+						? "bg-primary/10 text-primary hover:bg-primary/15"
 						: "hover:bg-muted"
-				} gap-3 px-6 py-3`}
+					} gap-3 px-6 py-3`}
 			>
 				{icon}
 				<span className="font-medium">{children}</span>

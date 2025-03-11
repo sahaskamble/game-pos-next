@@ -31,7 +31,7 @@ export default function BookingPage({ params }) {
   });
   const { data: games } = useCollection("games");
   const { data: customers, createItem: createCustomer } = useCollection("customers");
-  const { data: snacks } = useCollection("snacks");
+  const { data: snacks, updateItem: updateSnacksQuantity } = useCollection("snacks");
   const { data: settings } = useCollection("settings");
   const { createItem: createSession } = useCollection("sessions");
   const { createItem: createSessionSnack } = useCollection("session_snack");
@@ -310,9 +310,10 @@ export default function BookingPage({ params }) {
         // Don't throw error here as session is already created
       }
 
-      // Create session snacks if any are selected
+      // Create session snacks and update snack quantities
       if (formData.selectedSnacks.length > 0) {
         for (const snack of formData.selectedSnacks) {
+          // Create session snack entry
           await createSessionSnack({
             session_id: session.id,
             snack_id: snack.id,
@@ -321,6 +322,18 @@ export default function BookingPage({ params }) {
             branch_id: user.branch_id,
             user_id: user.id,
           });
+
+          // Update snack quantity in snacks collection
+          try {
+            const currentSnack = snacks.find((s) => s.id === snack.id);
+            const newQuantity = currentSnack.quanity - snack.quantity;
+            await updateSnacksQuantity(snack.id, {
+              quanity: newQuantity
+            });
+          } catch (error) {
+            console.error(`Error updating quantity for snack ${snack.id}:`, error);
+            toast.error(`Failed to update quantity for ${snack.name}`);
+          }
         }
       }
 

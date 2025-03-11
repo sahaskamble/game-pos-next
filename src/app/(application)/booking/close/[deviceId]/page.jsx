@@ -30,6 +30,7 @@ export default function CloseSessionPage({ params }) {
 		discount_percentage: 0,
 		discount_amount: 0,
 		gg_point_used: 0,
+		payment_mode: '',
 		gg_price: 0
 	});
 	const [maxGGPoints, setMaxGGPoints] = useState(0);
@@ -74,7 +75,8 @@ export default function CloseSessionPage({ params }) {
 						gg_point_used: 0,
 						gg_price: 0,
 						discount_amount: 0,
-						discount_percentage: 0
+						discount_percentage: 0,
+						payment_mode: matchingSession.payment_mode || ''
 					});
 
 					setFinalAmount(sessionTotalAmount);
@@ -100,6 +102,8 @@ export default function CloseSessionPage({ params }) {
 
 		// Reset all discount values first
 		let newFormData = { ...formData };
+		// Preserve the payment_mode selected by the user
+		const currentPaymentMode = formData.payment_mode;
 
 		if (formData.discount_unit === "percentage" && formData.discount_percentage > 0) {
 			newFormData.discount_amount = (baseAmount * formData.discount_percentage / 100).toFixed(2);
@@ -126,6 +130,9 @@ export default function CloseSessionPage({ params }) {
 			calculatedAmount = baseAmount - newFormData.gg_price;
 		}
 
+		// Restore the user's payment mode selection
+		newFormData.payment_mode = currentPaymentMode;
+
 		setFormData(newFormData);
 		setFinalAmount(calculatedAmount);
 	}, [formData.discount_unit, formData.discount_percentage, formData.discount_amount, formData.gg_point_used, session, settings]);
@@ -138,6 +145,7 @@ export default function CloseSessionPage({ params }) {
 			discount_percentage: 0,
 			gg_point_used: 0,
 			gg_price: 0
+			// payment_mode is preserved
 		});
 	};
 
@@ -180,10 +188,11 @@ export default function CloseSessionPage({ params }) {
 			await updateSession(session.id, {
 				...session,
 				status: 'Closed',
-				final_amount: finalAmount,
+				amount_paid: finalAmount,
 				discount_amount: formData.discount_amount,
 				discount_percentage: formData.discount_percentage,
 				rewardPointsUsed: formData.gg_point_used,
+				payment_mode: formData.payment_mode // Save the selected payment mode
 			});
 
 			// Update Device Status
@@ -271,6 +280,10 @@ export default function CloseSessionPage({ params }) {
 						<h1>Total</h1>
 						<p>Rs. {finalAmount.toFixed(2)}</p>
 					</div>
+					<div className='flex items-center justify-between text-sm text-muted-foreground font-semibold px-4'>
+						<h1>Selected Payment Mode</h1>
+						<p>{formData?.payment_mode}</p>
+					</div>
 
 					<div id='separator' className='border border-muted-foreground mt-4' />
 
@@ -336,6 +349,22 @@ export default function CloseSessionPage({ params }) {
 								/>
 							</div>
 						)}
+
+						<div className="space-y-2">
+							<Label htmlFor="payment_mode">Payment Mode</Label>
+							<Select
+								value={formData.payment_mode}
+								onValueChange={(value) => setFormData({ ...formData, payment_mode: value })}
+							>
+								<SelectTrigger>
+									<SelectValue placeholder="Select Payment Mode" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="Upi">UPI</SelectItem>
+									<SelectItem value="Cash">Cash</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
 
 						<Button type="submit" className="w-full">Close Session</Button>
 					</form>

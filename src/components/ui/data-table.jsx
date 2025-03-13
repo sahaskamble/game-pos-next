@@ -9,7 +9,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,19 +29,40 @@ import {
 } from "@/components/ui/table";
 import { PDFExport } from "../Table2PDF";
 import { CSVExport } from "../Table2CSV";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function DataTable({
   data,
   columns,
   loading,
-  searchKey,
   searchPlaceholder = "Filter...",
-  meta, // Add meta to props
+  displayPdf,
+  displayCsv,
+  meta,
 }) {
   const [sorting, setSorting] = React.useState([]);
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
   const [rowSelection, setRowSelection] = React.useState({});
+
+  // Get filterable columns (exclude action columns and columns with enableHiding: false)
+  const filterableColumns = React.useMemo(() => {
+    return columns
+      .filter(column => 
+        column.id !== "actions" && 
+        column.enableHiding !== false &&
+        typeof column.accessorKey === "string"
+      )
+      .map(column => ({
+        id: column.accessorKey,
+        label: column.header?.toString() || column.accessorKey
+      }));
+  }, [columns]);
+
+  // Initialize selectedColumn with the first filterable column's id
+  const [selectedColumn, setSelectedColumn] = React.useState(
+    filterableColumns.length > 0 ? filterableColumns[0].id : null
+  );
 
   const table = useReactTable({
     data: data || [],
@@ -60,37 +81,74 @@ export function DataTable({
       columnVisibility,
       rowSelection,
     },
-    meta, // Add meta here to pass it to the table instance
+    meta,
   });
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
+  // Don't render the filter section if there are no filterable columns
+  if (filterableColumns.length === 0) {
+    return (
+      <div className="w-full">
+        {/* Rest of the table without filter section */}
+        {/* ... */}
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
-      <div className="flex gap-4 justify-between items-center py-4">
-        {searchKey && (
-          <Input
-            placeholder={searchPlaceholder}
-            value={(table.getColumn(searchKey)?.getFilterValue() ?? "")}
-            onChange={(event) =>
-              table.getColumn(searchKey)?.setFilterValue(event.target.value)
-            }
-            className='w-full'
+      <div className="flex items-center gap-4 py-4">
+        {selectedColumn && (
+          <>
+            <Select
+              value={selectedColumn}
+              onValueChange={setSelectedColumn}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select column to filter" />
+              </SelectTrigger>
+              <SelectContent>
+                {filterableColumns.map((column) => (
+                  <SelectItem key={column.id} value={column.id}>
+                    {column.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="flex-1 relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={`Filter by ${filterableColumns.find(col => col.id === selectedColumn)?.label.toLowerCase() || 'column'}...`}
+                value={(table.getColumn(selectedColumn)?.getFilterValue() ?? "")}
+                onChange={(event) =>
+                  table.getColumn(selectedColumn)?.setFilterValue(event.target.value)
+                }
+                className="pl-8 w-full"
+              />
+            </div>
+          </>
+        )}
+
+        {displayPdf && (
+          <PDFExport
+            data={data}
+            columns={columns}
+            fileName="export.pdf"
+            title="Data Export"
           />
         )}
-        <PDFExport
-          data={data}
-          columns={columns}
-          fileName="Cashlog.pdf"
-          title="Cashlog List"
-        />
-        <CSVExport
-          data={data}
-          columns={columns}
-          fileName="Cashlog.csv"
-        />
+        {displayCsv && (
+          <CSVExport
+            data={data}
+            columns={columns}
+            fileName="export.csv"
+          />
+        )}
+        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">

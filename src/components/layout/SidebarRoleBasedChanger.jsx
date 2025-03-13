@@ -16,8 +16,8 @@ import {
 	Receipt,
 	Users,
 	UserCog,
-	ChevronRight,
-	Gamepad2
+	Gamepad2,
+	CalendarCheckIcon
 } from "lucide-react";
 
 export default function RoleChanger({ role }) {
@@ -59,6 +59,11 @@ export default function RoleChanger({ role }) {
 				label: "Settings",
 				path: "/settings",
 				icon: <Settings className="w-4 h-4" />
+			},
+			{
+				label: "Closed Adv Bookings",
+				path: "/closed-advance-bookings",
+				icon: <CalendarCheckIcon className="w-4 h-4" />
 			},
 			{
 				label: "Reports",
@@ -123,6 +128,11 @@ export default function RoleChanger({ role }) {
 			},
 		],
 		Staff: [
+			{
+				label: "Dashboard",
+				path: "/dashboard",
+				icon: <LayoutDashboard className="w-4 h-4" />
+			},
 			{
 				label: "Sessions",
 				path: "/sessions",
@@ -204,8 +214,8 @@ function SidebarButton({ path, isActive, icon, children }) {
 		<Link href={path} className="w-full">
 			<SidebarMenuButton
 				className={`w-full rounded-lg transition-colors duration-200 ${isActive
-						? "bg-primary/10 text-primary hover:bg-primary/15"
-						: "hover:bg-muted"
+					? "bg-primary/10 text-primary hover:bg-primary/15"
+					: "hover:bg-muted"
 					} gap-3 px-6 py-3`}
 			>
 				{icon}

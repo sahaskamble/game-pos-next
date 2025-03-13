@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -9,31 +10,82 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useCollection } from "@/lib/hooks/useCollection";
+import { toast } from "sonner";
+import { useAuth } from "@/lib/context/AuthContext";
 
 export function AddSessionDialog({ open, onOpenChange, onSubmit }) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     status: 'Active',
-    payment_mode: 'Cash',
+    customer_id: '',
+    no_of_players: 1,
+    visiting_time: new Date().toISOString().slice(0, 16), // Format: YYYY-MM-DDTHH:mm
+    note: '',
+    branch_id: user?.branch_id,
+    created_by: user?.id
   });
 
   const { data: customers } = useCollection("customers");
-  const { data: devices } = useCollection("devices");
-  const { data: games } = useCollection("games");
-  const { data: branches } = useCollection("branches");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await onSubmit(formData);
-    onOpenChange(false);
+
+    try {
+      if (!formData.customer_id) {
+        toast.error("Please select a customer");
+        return;
+      }
+
+      if (!formData.visiting_time) {
+        toast.error("Please select visiting time");
+        return;
+      }
+
+      if (formData.no_of_players < 1) {
+        toast.error("Number of players must be at least 1");
+        return;
+      }
+
+      const visitingTime = new Date(formData.visiting_time);
+      if (isNaN(visitingTime.getTime())) {
+        toast.error("Invalid visiting time");
+        return;
+      }
+
+      const sessionData = {
+        ...formData,
+        no_of_players: parseInt(formData.no_of_players),
+        visiting_time: visitingTime.toISOString(),
+      };
+
+      await onSubmit(sessionData);
+      onOpenChange(false);
+
+      // Reset form
+      setFormData({
+        status: 'Active',
+        customer_id: '',
+        no_of_players: 1,
+        visiting_time: new Date().toISOString().slice(0, 16),
+        note: '',
+        branch_id: user?.branch_id,
+        created_by: user?.id
+      });
+
+      toast.success("Session added successfully");
+    } catch (error) {
+      console.error("Error creating session:", error);
+      toast.error("Failed to create session");
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Session</DialogTitle>
+          <DialogTitle>Advance Booking</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -56,88 +108,35 @@ export function AddSessionDialog({ open, onOpenChange, onSubmit }) {
           </div>
 
           <div>
-            <Label>Device</Label>
-            <Select
-              value={formData.device_id}
-              onValueChange={(value) => setFormData({ ...formData, device_id: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select device" />
-              </SelectTrigger>
-              <SelectContent>
-                {devices?.map((device) => (
-                  <SelectItem key={device.id} value={device.id}>
-                    {device.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label>Game</Label>
-            <Select
-              value={formData.game_id}
-              onValueChange={(value) => setFormData({ ...formData, game_id: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select game" />
-              </SelectTrigger>
-              <SelectContent>
-                {games?.map((game) => (
-                  <SelectItem key={game.id} value={game.id}>
-                    {game.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label>Branch</Label>
-            <Select
-              value={formData.branch_id}
-              onValueChange={(value) => setFormData({ ...formData, branch_id: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select branch" />
-              </SelectTrigger>
-              <SelectContent>
-                {branches?.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
             <Label>Number of Players</Label>
             <Input
               type="number"
-              value={formData.no_of_players || ''}
+              min="1"
+              value={formData.no_of_players}
               onChange={(e) => setFormData({ ...formData, no_of_players: e.target.value })}
             />
           </div>
 
           <div>
-            <Label>Payment Mode</Label>
-            <Select
-              value={formData.payment_mode}
-              onValueChange={(value) => setFormData({ ...formData, payment_mode: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Cash">Cash</SelectItem>
-                <SelectItem value="Upi">UPI</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Visiting Date and Time</Label>
+            <Input
+              type="datetime-local"
+              value={formData.visiting_time}
+              onChange={(e) => setFormData({ ...formData, visiting_time: e.target.value })}
+            />
           </div>
 
-          <Button type="submit">Create Session</Button>
+          <div>
+            <Label>Note</Label>
+            <Textarea
+              placeholder="Add any additional notes here..."
+              value={formData.note}
+              onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+              rows={3}
+            />
+          </div>
+
+          <Button type="submit" className="w-full">Add Advance Session</Button>
         </form>
       </DialogContent>
     </Dialog>

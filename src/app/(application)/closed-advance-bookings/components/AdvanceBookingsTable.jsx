@@ -50,7 +50,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function SessionsTable({ data = [], loading, onEdit, onDelete }) {
+export function AdvanceBookingsTable({ data = [], loading, onEdit, onDelete }) {
   const [sorting, setSorting] = React.useState([]);
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
@@ -68,7 +68,7 @@ export function SessionsTable({ data = [], loading, onEdit, onDelete }) {
 
   const columns = [
     {
-      id: "customer",  // Simple ID for the column
+      id: "customer_name",
       accessorKey: "expand.customer_id.customer_name",
       header: ({ column }) => {
         return (
@@ -84,67 +84,61 @@ export function SessionsTable({ data = [], loading, onEdit, onDelete }) {
       cell: ({ row }) => row.original.expand?.customer_id?.customer_name,
     },
     {
-      accessorKey: "session_in",
-      header: "Session In",
-      cell: ({ row }) =>
-        row.original.session_in ? format(new Date(row.original.session_in), 'PPp') : '-',
+      id: "visiting_time",
+      accessorKey: "visiting_time",
+      header: "Visiting Time",
+      cell: ({ row }) => {
+        return format(new Date(row.getValue("visiting_time")), "PPpp");
+      },
     },
     {
-      accessorKey: "session_out",
-      header: "Session Out",
-      cell: ({ row }) =>
-        row.original.session_out ? format(new Date(row.original.session_out), 'PPp') : '-',
+      id: "no_of_players",
+      accessorKey: "no_of_players",
+      header: "Players",
+      cell: ({ row }) => row.original.no_of_players,
     },
     {
-      id: "branch",  // Simple ID for the column
+      id: "note",
+      accessorKey: "note",
+      header: "Note",
+      cell: ({ row }) => row.original.note,
+    },
+    {
+      id: "status",
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        return (
+          <Badge variant={row.getValue("status") === "Closed" ? "secondary" : "default"}>
+            {row.getValue("status")}
+          </Badge>
+        );
+      },
+    },
+    {
+      id: "created_by",
+      accessorKey: "expand.created_by.username",
+      header: "Created By",
+      cell: ({ row }) => row.original.expand?.created_by?.username,
+    },
+    {
+      id: "closed_by",
+      accessorKey: "expand.closed_by.username",
+      header: "Closed By",
+      cell: ({ row }) => row.original.expand?.closed_by?.username,
+    },
+    {
+      id: "branch",
       accessorKey: "expand.branch_id.name",
       header: "Branch",
       cell: ({ row }) => row.original.expand?.branch_id?.name,
     },
     {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => row.original.status,
-    },
-    {
-      accessorKey: "total_amount",
-      header: "Amount",
-      cell: ({ row }) => `Rs. ${row.original.total_amount || 0}`,
-    },
-    {
-      id: 'created_by',
-      accessorKey: "expand.user_id.username",
-      header: "Created By",
-      cell: ({ row }) => row.original.expand?.user_id?.username,
-    },
-    {
-      id: 'closed_by',
-      accessorKey: "expand.billed_by.username",
-      header: "Closed By",
-      cell: ({ row }) => row.original.expand?.billed_by?.username,
-    },
-    {
-      id: "actions",
-      enableHiding: false,
+      id: "created",
+      accessorKey: "created",
+      header: "Created At",
       cell: ({ row }) => {
-        const session = row.original;
-        return (
-          <div className="flex gap-2">
-            <Button variant="ghost" size="icon" onClick={() => onEdit(session)}>
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => onDelete(session.id)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="default"
-              size="icon"
-              onClick={() => setSelectedSession(session)}
-            >
-              <FileText className="h-4 w-4" color="#fff" />
-            </Button>
-          </div>
-        );
+        return format(new Date(row.getValue("created")), "PPpp");
       },
     },
   ];

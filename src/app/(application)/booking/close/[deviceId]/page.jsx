@@ -9,9 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/context/AuthContext';
+import { toast } from 'sonner';
 
 export default function CloseSessionPage({ params }) {
 	const router = useRouter();
+	const { user } = useAuth();
 	const unwrappedParams = use(params);
 	const deviceId = unwrappedParams.deviceId;
 
@@ -182,12 +185,17 @@ export default function CloseSessionPage({ params }) {
 		e.preventDefault();
 
 		if (!session) return;
+		if (!user) {
+			toast.error("User not authenticated, Please Login");
+			return;
+		}
 
 		try {
 			// Update session with final calculation
 			await updateSession(session.id, {
 				...session,
 				status: 'Closed',
+				billed_by: user.id,
 				amount_paid: finalAmount,
 				discount_amount: formData.discount_amount,
 				discount_percentage: formData.discount_percentage,

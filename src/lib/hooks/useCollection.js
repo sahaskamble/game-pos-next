@@ -10,7 +10,7 @@ export function useCollection(collectionName, options) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await pbService.getList(collectionName, 1, 50, options);
+      const response = await pbService.getList(collectionName, 1, 9999999999, options);
       setData(response.items);
       setError(null);
     } catch (err) {

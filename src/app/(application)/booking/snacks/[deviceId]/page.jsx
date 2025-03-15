@@ -16,7 +16,9 @@ export default function SnackSessionPage({ params }) {
 	const deviceId = unwrappedParams.deviceId;
 
 	const { data: devices } = useCollection("devices");
-	const { data: sessions, updateItem: updateSession } = useCollection("sessions");
+	const { data: sessions, updateItem: updateSession } = useCollection("sessions", {
+		filter: "status='Active'"
+	});
 	const { data: snacks, updateItem: updateSnacksQuantity } = useCollection("snacks");
 	const { createItem: createSessionSnack } = useCollection("session_snack");
 	const { user } = useAuth();

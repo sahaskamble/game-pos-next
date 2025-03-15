@@ -5,7 +5,7 @@ import { useCollection } from "@/lib/hooks/useCollection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { startOfWeek, startOfMonth, startOfYear, subDays, endOfDay } from 'date-fns';
-import { AdvanceBookingsTable } from "@/components/advance-bookings/AdvanceBookingsTable";
+import { AdvanceBookingsTable } from "./components/AdvanceBookingsTable";
 
 const DATE_RANGE_OPTIONS = [
   { label: "Today", value: "today" },
@@ -23,7 +23,7 @@ export default function AdvanceBookings() {
 
   const { data: bookings, loading } = useCollection("advance_bookings", {
     filter: 'status = "Closed"',
-    expand: 'customer_id,branch_id,closed_by,created_by',
+    expand: 'customer_id,branch_id,created_by,closed_by',
     sort: '-created',
   });
 
@@ -77,40 +77,40 @@ export default function AdvanceBookings() {
     <div className="container px-8 mx-auto py-10">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-3xl font-bold tracking-tight">Closed Advance Bookings</h2>
+        <div className="mb-4 flex gap-4 items-center">
+          <Select value={dateRangeType} onValueChange={handleDateRangeTypeChange}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Select date range" />
+            </SelectTrigger>
+            <SelectContent>
+              {DATE_RANGE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {dateRangeType === "custom" && (
+            <div className="flex gap-2 items-center">
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-40"
+              />
+              <span>to</span>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-40"
+              />
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="mb-4 flex gap-4 items-center">
-        <Select value={dateRangeType} onValueChange={handleDateRangeTypeChange}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Select date range" />
-          </SelectTrigger>
-          <SelectContent>
-            {DATE_RANGE_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {dateRangeType === "custom" && (
-          <div className="flex gap-2 items-center">
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-40"
-            />
-            <span>to</span>
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-40"
-            />
-          </div>
-        )}
-      </div>
 
       <AdvanceBookingsTable
         data={filteredBookings || []}

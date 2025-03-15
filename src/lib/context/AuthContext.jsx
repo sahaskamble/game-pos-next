@@ -15,8 +15,9 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     async function fetchBranches() {
       try {
-        const record = await pb.collection("branches").getList();
-        setBranches(record.items);
+        pb.autoCancellation(false);
+        const record = await pb?.collection("branches")?.getFullList();
+        setBranches(record);
       } catch (error) {
         console.error("Error fetching branches:", error);
       }

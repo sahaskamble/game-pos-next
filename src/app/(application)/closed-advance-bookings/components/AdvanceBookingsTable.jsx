@@ -2,10 +2,6 @@
 
 import * as React from "react";
 import {
-  ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -13,8 +9,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, Edit, FileText, Search, Trash2 } from "lucide-react";
-
+import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -31,17 +26,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format } from "date-fns";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { useState } from "react";
-import InvoiceDownload from "./InvoiceDownload";
-import { CSVExport } from "../Table2CSV";
-import { PDFExport } from "../Table2PDF";
 import {
   Select,
   SelectContent,
@@ -49,209 +33,111 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { columns } from "./columns";
+import { CSVExport } from "@/components/Table2CSV";
+import { PDFExport } from "@/components/Table2PDF";
+import { useAuth } from "@/lib/context/AuthContext";
 
-export function AdvanceBookingsTable({ data = [], loading, onEdit, onDelete }) {
+const FILTER_OPTIONS = [
+  { label: "Customer", value: "customer_name" },
+  { label: "Branch", value: "branch" },
+  { label: "Status", value: "status" },
+  { label: "Created By", value: "created_by" },
+  { label: "Closed By", value: "closed_by" },
+];
+
+export function AdvanceBookingsTable({ data = [], loading }) {
   const [sorting, setSorting] = React.useState([]);
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
-  const [rowSelection, setRowSelection] = React.useState({});
-  const [selectedSession, setSelectedSession] = useState(null);
-  const [selectedColumn, setSelectedColumn] = useState("customer");
-
-  const filterableColumns = [
-    { id: "customer", label: "Customer" },
-    { id: "branch", label: "Branch" },
-    { id: "status", label: "Status" },
-    { id: "created_by", label: "Created By" },
-    { id: "closed_by", label: "Closed By" },
-  ];
-
-  const columns = [
-    {
-      id: "customer_name",
-      accessorKey: "expand.customer_id.customer_name",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Customer
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        );
-      },
-      cell: ({ row }) => row.original.expand?.customer_id?.customer_name,
-    },
-    {
-      id: "visiting_time",
-      accessorKey: "visiting_time",
-      header: "Visiting Time",
-      cell: ({ row }) => {
-        return format(new Date(row.getValue("visiting_time")), "PPpp");
-      },
-    },
-    {
-      id: "no_of_players",
-      accessorKey: "no_of_players",
-      header: "Players",
-      cell: ({ row }) => row.original.no_of_players,
-    },
-    {
-      id: "note",
-      accessorKey: "note",
-      header: "Note",
-      cell: ({ row }) => row.original.note,
-    },
-    {
-      id: "status",
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => {
-        return (
-          <Badge variant={row.getValue("status") === "Closed" ? "secondary" : "default"}>
-            {row.getValue("status")}
-          </Badge>
-        );
-      },
-    },
-    {
-      id: "created_by",
-      accessorKey: "expand.created_by.username",
-      header: "Created By",
-      cell: ({ row }) => row.original.expand?.created_by?.username,
-    },
-    {
-      id: "closed_by",
-      accessorKey: "expand.closed_by.username",
-      header: "Closed By",
-      cell: ({ row }) => row.original.expand?.closed_by?.username,
-    },
-    {
-      id: "branch",
-      accessorKey: "expand.branch_id.name",
-      header: "Branch",
-      cell: ({ row }) => row.original.expand?.branch_id?.name,
-    },
-    {
-      id: "created",
-      accessorKey: "created",
-      header: "Created At",
-      cell: ({ row }) => {
-        return format(new Date(row.getValue("created")), "PPpp");
-      },
-    },
-  ];
+  const [selectedColumn, setSelectedColumn] = React.useState("customer_name");
+  const { user } = useAuth();
 
   const table = useReactTable({
     data,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
-      rowSelection,
     },
   });
 
-  const handleFilterChange = (value) => {
-    const column = table.getColumn(selectedColumn);
-    if (column) {
-      column.setFilterValue(value);
-    }
-  };
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
   return (
-    <>
-      <div className="w-full">
-        <div className="flex flex-col gap-4 py-4">
-          <div className="flex items-center gap-4">
-            <Select
-              value={selectedColumn}
-              onValueChange={setSelectedColumn}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select column to filter" />
-              </SelectTrigger>
-              <SelectContent>
-                {filterableColumns.map((column) => (
-                  <SelectItem key={column.id} value={column.id}>
-                    {column.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={`Filter by ${filterableColumns.find(col => col.id === selectedColumn)?.label.toLowerCase()}...`}
-                  value={(table.getColumn(selectedColumn)?.getFilterValue() ?? "")}
-                  onChange={(event) => handleFilterChange(event.target.value)}
-                  className="pl-8"
-                />
-              </div>
-            </div>
-
-            <PDFExport
-              data={data}
-              columns={columns}
-              fileName="Sessions.pdf"
-              title="Session History"
-            />
-            <CSVExport
-              data={data}
-              columns={columns}
-              fileName="Sessions.csv"
-            />
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  Columns <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {table
-                  .getAllColumns()
-                  .filter((column) => column.getCanHide())
-                  .map((column) => {
-                    return (
-                      <DropdownMenuCheckboxItem
-                        key={column.id}
-                        className="capitalize"
-                        checked={column.getIsVisible()}
-                        onCheckedChange={(value) =>
-                          column.toggleVisibility(!!value)
-                        }
-                      >
-                        {column.id}
-                      </DropdownMenuCheckboxItem>
-                    );
-                  })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
+    <div>
+      <div className="flex items-center py-4 gap-2">
+        <Select
+          value={selectedColumn}
+          onValueChange={setSelectedColumn}
+        >
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Select column" />
+          </SelectTrigger>
+          <SelectContent>
+            {FILTER_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input
+          placeholder={`Filter ${FILTER_OPTIONS.find(opt => opt.value === selectedColumn)?.label.toLowerCase()}...`}
+          value={(table.getColumn(selectedColumn)?.getFilterValue() ?? "")}
+          onChange={(event) =>
+            table.getColumn(selectedColumn)?.setFilterValue(event.target.value)
+          }
+          className="max-w-sm"
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="ml-auto">
+              Columns <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {table
+              .getAllColumns()
+              .filter((column) => column.getCanHide())
+              .map((column) => {
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) =>
+                      column.toggleVisibility(!!value)
+                    }
+                  >
+                    {column.id}
+                  </DropdownMenuCheckboxItem>
+                );
+              })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {
+          user?.role === "SuperAdmin" && (
+            <>
+              <PDFExport data={data} filename="advance-bookings" />
+              <CSVExport data={data} filename="advance-bookings" />
+            </>
+          )
+        }
+      </div>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  return (
                     <TableHead key={header.id}>
                       {header.isPlaceholder
                         ? null
@@ -260,70 +146,59 @@ export function AdvanceBookingsTable({ data = [], loading, onEdit, onDelete }) {
                           header.getContext()
                         )}
                     </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
                   ))}
                 </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    No results.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="flex items-center justify-end space-x-2 py-4">
-          <div className="space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  {loading ? "Loading..." : "No results."}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
-
-      <Dialog open={!!selectedSession} onOpenChange={(open) => !open && setSelectedSession(null)}>
-        <DialogContent className="max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Download Invoice</DialogTitle>
-          </DialogHeader>
-          {selectedSession && <InvoiceDownload session={selectedSession} />}
-        </DialogContent>
-      </Dialog>
-    </>
+      <div className="flex items-center justify-end space-x-2 py-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          Previous
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          Next
+        </Button>
+      </div>
+    </div>
   );
 }

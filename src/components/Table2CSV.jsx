@@ -1,6 +1,7 @@
 import React from 'react'
 import { Button } from "@/components/ui/button"
 import { Download } from "lucide-react"
+import { useAuth } from '@/lib/context/AuthContext'
 
 export function CSVExport({
   data,
@@ -9,6 +10,8 @@ export function CSVExport({
   buttonProps,
   className
 }) {
+  const { user } = useAuth();
+
   const handleExportCSV = () => {
     // Filter out action columns and excluded columns
     const exportColumns = columns.filter(column =>
@@ -72,7 +75,7 @@ export function CSVExport({
       headers,
       ...rows
     ]
-      .map(row => 
+      .map(row =>
         row
           .map(cell => {
             // Handle cells that might contain commas or quotes
@@ -97,15 +100,19 @@ export function CSVExport({
     }
   }
 
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleExportCSV}
-      className={`ml-2 ${className || ''}`}
-      {...buttonProps}
-    >
-      <Download className="mr-2 h-4 w-4" /> Export CSV
-    </Button>
-  )
+  if (user?.role==='SuperAdmin') {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleExportCSV}
+        className={`ml-2 ${className || ''}`}
+        {...buttonProps}
+      >
+        <Download className="mr-2 h-4 w-4" /> Export CSV
+      </Button>
+    )
+  } else {
+    return null;
+  }  
 }

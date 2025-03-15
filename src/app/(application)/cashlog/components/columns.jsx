@@ -38,7 +38,7 @@ export const columns = [
 
       return (
         <Badge variant="outline" className="font-mono">
-          Rs.{withdrawals.amount.toLocaleString()}
+          Rs.{withdrawals?.amount?.toLocaleString()}
         </Badge>
       );
     },
@@ -52,7 +52,7 @@ export const columns = [
 
       return (
         <Badge variant="outline">
-          {withdrawals.description.toLocaleString()}
+          {withdrawals?.description?.toLocaleString()}
         </Badge>
       );
     },
@@ -62,11 +62,11 @@ export const columns = [
     header: "Taken By",
     cell: ({ row }) => {
       const withdrawals = row.original.withdraw_from_drawer;
-      if (!withdrawals?.amount) return "-";
+      if (!withdrawals?.taken_by) return "-";
 
       return (
         <Badge variant="outline">
-          {withdrawals.taken_by.toLocaleString()}
+          {withdrawals?.taken_by?.toLocaleString()}
         </Badge>
       );
     },

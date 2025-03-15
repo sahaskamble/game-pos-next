@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCollection } from "@/lib/hooks/useCollection";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,11 +10,18 @@ import { AddItemDialog } from "@/components/inventory/AddItemDialog";
 import { EditItemDialog } from "@/components/inventory/EditItemDialog";
 import { useAuth } from "@/lib/context/AuthContext";
 import { StatsCard } from "@/components/dashboard/StatsCard";
+import DataFilter from "@/components/superAdmin/DataFilter";
 
 export default function Inventory() {
   const [activeTab, setActiveTab] = useState("devices");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [selectedBranch, setSelectedBranch] = useState('');
+  const [filteredInventory, setFilteredInventory] = useState({
+    devices: [],
+    games: [],
+    snacks: []
+  });
   const { user } = useAuth();
 
   const isAdminOrSuperAdmin = user?.role === 'SuperAdmin' || user?.role === 'Admin';
@@ -62,12 +69,34 @@ export default function Inventory() {
     loading: branchesLoading,
   } = useCollection("branches");
 
-  // Calculate snack inventory statistics
-  const snackStats = snacks?.reduce((stats, snack) => {
+  // Filter inventory based on branch
+  useEffect(() => {
+    if (devices && games && snacks) {
+      let filteredDevices = [...devices];
+      let filteredGames = [...games];
+      let filteredSnacks = [...snacks];
+
+      // Apply branch filter if selected
+      if (selectedBranch) {
+        filteredDevices = devices.filter(device => device.branch_id === selectedBranch);
+        filteredGames = games.filter(game => game.branch_id === selectedBranch);
+        filteredSnacks = snacks.filter(snack => snack.branch_id === selectedBranch);
+      }
+
+      setFilteredInventory({
+        devices: filteredDevices,
+        games: filteredGames,
+        snacks: filteredSnacks
+      });
+    }
+  }, [devices, games, snacks, selectedBranch]);
+
+  // Calculate snack inventory statistics from filtered snacks
+  const snackStats = filteredInventory.snacks?.reduce((stats, snack) => {
     const quantity = snack.quanity || 0;
     if (quantity === 0) {
       stats.emptyStock++;
-    } else if (quantity <= 10) { // Assuming 10 is the low stock threshold
+    } else if (quantity <= 10) {
       stats.lowStock++;
     } else {
       stats.availableStock++;
@@ -148,13 +177,17 @@ export default function Inventory() {
     <div className="container px-8 mx-auto py-10">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-3xl font-bold tracking-tight">Inventory</h2>
-        {/* Only show Add button for Admin/SuperAdmin */}
-        {isAdminOrSuperAdmin && (
-          <Button onClick={() => setShowAddDialog(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add {getItemTypeSingular(activeTab)}
-          </Button>
-        )}
+        <div className="flex items-center gap-4">
+          <DataFilter
+            onBranchChange={setSelectedBranch}
+          />
+          {isAdminOrSuperAdmin && (
+            <Button onClick={() => setShowAddDialog(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add {getItemTypeSingular(activeTab)}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -189,7 +222,7 @@ export default function Inventory() {
         {Object.entries(collections).map(([key, collection]) => (
           <TabsContent key={key} value={key}>
             <InventoryTable
-              data={collection.data}
+              data={filteredInventory[key]}
               loading={collection.loading}
               fields={collection.fields}
               onEdit={isAdminOrSuperAdmin ? setEditingItem : null}

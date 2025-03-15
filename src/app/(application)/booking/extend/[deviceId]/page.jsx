@@ -18,7 +18,9 @@ export default function ExtendSessionPage({ params }) {
 
 	const { data: devices } = useCollection("devices");
 	const { data: settings } = useCollection("settings");
-	const { data: sessions, updateItem: updateSession } = useCollection("sessions");
+	const { data: sessions, updateItem: updateSession } = useCollection("sessions", {
+		filter: "status='Active'"
+	});
 
 	const [device, setDevice] = useState({});
 	const [formData, setformData] = useState({

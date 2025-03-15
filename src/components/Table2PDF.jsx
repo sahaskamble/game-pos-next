@@ -1,8 +1,9 @@
-import React from 'react'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import { Button } from "@/components/ui/button"
-import { Download } from "lucide-react"
+import React from "react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { useAuth } from "@/lib/context/AuthContext";
 
 export function PDFExport({
   data,
@@ -12,6 +13,9 @@ export function PDFExport({
   buttonProps,
   className
 }) {
+
+  const { user } = useAuth();
+
   const handleExportPDF = () => {
     // Create a new jsPDF instance
     const doc = new jsPDF()
@@ -99,16 +103,19 @@ export function PDFExport({
     // Save the PDF
     doc.save(fileName)
   }
-
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleExportPDF}
-      className={`ml-2 ${className || ''}`}
-      {...buttonProps}
-    >
-      <Download className="mr-2 h-4 w-4" /> Export PDF
-    </Button>
-  )
+  if (user?.role === 'SuperAdmin') {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleExportPDF}
+        className={`ml-2 ${className || ''}`}
+        {...buttonProps}
+      >
+        <Download className="mr-2 h-4 w-4" /> Export PDF
+      </Button>
+    );
+  } else {
+    return null;
+  }
 }

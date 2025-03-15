@@ -18,7 +18,9 @@ export default function CloseSessionPage({ params }) {
 	const unwrappedParams = use(params);
 	const deviceId = unwrappedParams.deviceId;
 
-	const { data: sessions, updateItem: updateSession } = useCollection("sessions");
+	const { data: sessions, updateItem: updateSession } = useCollection("sessions", {
+		filter: "status='Active'"
+	});
 	const { data: settings } = useCollection("settings");
 	const { data: customers } = useCollection("customers");
 	const { data: devices, updateItem: updateDevice } = useCollection("devices");
@@ -33,8 +35,10 @@ export default function CloseSessionPage({ params }) {
 		discount_percentage: 0,
 		discount_amount: 0,
 		gg_point_used: 0,
-		payment_mode: '',
-		gg_price: 0
+		payment_mode: '', // Changed from a default value to empty string
+		gg_price: 0,
+		cash_amount: 0,
+		upi_amount: 0
 	});
 	const [maxGGPoints, setMaxGGPoints] = useState(0);
 	const [finalAmount, setFinalAmount] = useState(0);
@@ -79,7 +83,7 @@ export default function CloseSessionPage({ params }) {
 						gg_price: 0,
 						discount_amount: 0,
 						discount_percentage: 0,
-						payment_mode: matchingSession.payment_mode || ''
+						payment_mode: matchingSession.payment_mode, // Changed to empty string instead of using matchingSession.payment_mode
 					});
 
 					setFinalAmount(sessionTotalAmount);
@@ -191,6 +195,18 @@ export default function CloseSessionPage({ params }) {
 		}
 
 		try {
+			// Add validation for Part-paid payment mode
+			if (formData.payment_mode === "Part-paid") {
+				const cashAmount = parseFloat(formData.cash_amount) || 0;
+				const upiAmount = parseFloat(formData.upi_amount) || 0;
+				const totalPaid = cashAmount + upiAmount;
+				
+				if (totalPaid !== finalAmount) {
+					toast.error(`Total of Cash (₹${cashAmount}) and UPI (₹${upiAmount}) must equal final amount (₹${finalAmount})`);
+					return;
+				}
+			}
+
 			// Update session with final calculation
 			await updateSession(session.id, {
 				...session,
@@ -200,7 +216,11 @@ export default function CloseSessionPage({ params }) {
 				discount_amount: formData.discount_amount,
 				discount_percentage: formData.discount_percentage,
 				rewardPointsUsed: formData.gg_point_used,
-				payment_mode: formData.payment_mode // Save the selected payment mode
+				payment_mode: formData.payment_mode,
+				Cash: formData.payment_mode === "Cash" ? finalAmount : 
+					  formData.payment_mode === "Part-paid" ? formData.cash_amount : 0,
+				Upi: formData.payment_mode === "Upi" ? finalAmount :
+					  formData.payment_mode === "Part-paid" ? formData.upi_amount : 0,
 			});
 
 			// Update Device Status
@@ -370,9 +390,51 @@ export default function CloseSessionPage({ params }) {
 								<SelectContent>
 									<SelectItem value="Upi">UPI</SelectItem>
 									<SelectItem value="Cash">Cash</SelectItem>
+									<SelectItem value="Part-paid">Part-paid</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
+
+						{formData.payment_mode === "Part-paid" && (
+							<div className="space-y-4">
+								<div className="space-y-2">
+									<Label htmlFor="cash_amount">Cash Amount</Label>
+									<Input
+										type="number"
+										id="cash_amount"
+										name="cash_amount"
+										value={formData.cash_amount}
+										onChange={(e) => setFormData({ ...formData, cash_amount: parseFloat(e.target.value) || 0 })}
+										placeholder="Enter cash amount"
+										min="0"
+										max={finalAmount}
+									/>
+								</div>
+								
+								<div className="space-y-2">
+									<Label htmlFor="upi_amount">UPI Amount</Label>
+									<Input
+										type="number"
+										id="upi_amount"
+										name="upi_amount"
+										value={formData.upi_amount}
+										onChange={(e) => setFormData({ ...formData, upi_amount: parseFloat(e.target.value) || 0 })}
+										placeholder="Enter UPI amount"
+										min="0"
+										max={finalAmount}
+									/>
+								</div>
+
+								<div className="text-sm text-muted-foreground">
+									Total Entered: ₹{((formData.cash_amount || 0) + (formData.upi_amount || 0)).toFixed(2)}
+									{(formData.cash_amount || 0) + (formData.upi_amount || 0) !== finalAmount && (
+										<span className="text-red-500 ml-2">
+											(Difference: ₹{(finalAmount - ((formData.cash_amount || 0) + (formData.upi_amount || 0))).toFixed(2)})
+										</span>
+									)}
+								</div>
+							</div>
+						)}
 
 						<Button type="submit" className="w-full">Close Session</Button>
 					</form>

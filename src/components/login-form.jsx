@@ -20,6 +20,8 @@ export function LoginForm({ className, ...props }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showSplash, setShowSplash] = useState(false);
 
+  console.log(branches);
+
   // Check if the logged-in user's branch matches the selected branch
   function verifyBranch(data, branch) {
     if (!data?.record?.branch_id) {
@@ -46,6 +48,7 @@ export function LoginForm({ className, ...props }) {
 
     // Show splash screen on successful login
     if (response?.record?.role) {
+      localStorage.setItem('branch_id', branch);
       setShowSplash(true);
       toast.success("Authorization successful");
       return; // Let the splash screen handle navigation

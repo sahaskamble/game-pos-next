@@ -4,14 +4,13 @@ import { Card, CardTitle, CardContent } from "@/components/ui/card";
 import { useCollection } from "@/lib/hooks/useCollection";
 import { AirplayIcon, Car, Clock, CookieIcon, Timer, TvIcon, Users, X } from "lucide-react";
 import { FaPlaystation } from "react-icons/fa";
-import ExtendSession from "./ExtendSession";
-import AddSnacksSession from "./AddSnacksSession";
 import { useRouter } from "next/navigation";
-import CloseSession from "./CloseSession";
 import Link from "next/link";
 
-export default function RenderDeviceSection({ devices, title, icon, onChanged = () => { } }) {
-  const { data: sessions } = useCollection("sessions");
+export default function RenderDeviceSection({ devices, title, icon }) {
+  const { data: sessions } = useCollection("sessions", {
+    filter: "status='Active'"
+  });
   const router = useRouter();
 
   const getStatusColor = (status) => {
@@ -27,7 +26,7 @@ export default function RenderDeviceSection({ devices, title, icon, onChanged = 
 
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pt-4">
       <h2 className="text-xl font-semibold flex items-center gap-2">
         {icon}
         {title}
@@ -71,15 +70,11 @@ export default function RenderDeviceSection({ devices, title, icon, onChanged = 
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
                     <span>Ends at: {
-                      sessions?.find(session =>
-                        session.device_id === device.id &&
-                        session.status === 'Active'
-                      )?.session_out ?
-                        new Date(sessions.find(session =>
-                          session.device_id === device.id &&
-                          session.status === 'Active'
-                        ).session_out).toLocaleTimeString() :
-                        'N/A'
+                      sessions
+                        ?.find(session => session.device_id === device.id)
+                        ?.session_out ? (
+                        new Date(sessions.find((session) => session.device_id === device.id).session_out).toLocaleTimeString()
+                      ) : 'N/A'
                     }</span>
                   </div>
                 </div>

@@ -129,11 +129,6 @@ export default function RoleChanger({ role }) {
 		],
 		Staff: [
 			{
-				label: "Dashboard",
-				path: "/dashboard",
-				icon: <LayoutDashboard className="w-4 h-4" />
-			},
-			{
 				label: "Sessions",
 				path: "/sessions",
 				icon: <CalendarDays className="w-4 h-4" />
@@ -142,11 +137,6 @@ export default function RoleChanger({ role }) {
 				label: "Bookings",
 				path: "/booking",
 				icon: <BookOpenCheck className="w-4 h-4" />
-			},
-			{
-				label: "Inventory",
-				path: "/inventory",
-				icon: <Package className="w-4 h-4" />
 			},
 			{
 				label: "Cash Log",

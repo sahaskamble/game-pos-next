@@ -23,11 +23,12 @@ export function AddSessionDialog({ open, onOpenChange, onSubmit }) {
     no_of_players: 1,
     visiting_time: new Date().toISOString().slice(0, 16), // Format: YYYY-MM-DDTHH:mm
     note: '',
-    branch_id: user?.branch_id,
+    branch_id: '',
     created_by: user?.id
   });
 
   const { data: customers } = useCollection("customers");
+  const { data: branches } = useCollection('branches');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -70,7 +71,7 @@ export function AddSessionDialog({ open, onOpenChange, onSubmit }) {
         no_of_players: 1,
         visiting_time: new Date().toISOString().slice(0, 16),
         note: '',
-        branch_id: user?.branch_id,
+        branch_id: '',
         created_by: user?.id
       });
 
@@ -124,6 +125,25 @@ export function AddSessionDialog({ open, onOpenChange, onSubmit }) {
               value={formData.visiting_time}
               onChange={(e) => setFormData({ ...formData, visiting_time: e.target.value })}
             />
+          </div>
+
+          <div>
+            <Label>Branch</Label>
+            <Select
+              value={formData.branch_id}
+              onValueChange={(value) => setFormData({ ...formData, branch_id: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Branch" />
+              </SelectTrigger>
+              <SelectContent>
+                {branches?.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>

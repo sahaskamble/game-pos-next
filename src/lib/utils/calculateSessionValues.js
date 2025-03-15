@@ -1,9 +1,6 @@
-export function calculateSessionValues(numberOfPlayers, settings) {
-  console.log("calculateSessionValues input:", { numberOfPlayers, settings });
-
-  // Change session_pricing to sessions_pricing to match the settings object
-  if (!settings?.sessions_pricing) {
-    console.error("Pricing configuration is missing in settings");
+export function calculateSessionValues(numberOfPlayers, settings, deviceType = 'vr') {
+  if (!settings?.session_pricing?.[deviceType]) {
+    console.error(`Pricing configuration is missing for device type: ${deviceType}`);
     return {
       totalAmount: 0,
       ggPoints: 0,
@@ -11,8 +8,8 @@ export function calculateSessionValues(numberOfPlayers, settings) {
     };
   }
 
-  // Calculate session price
-  const pricing = settings.sessions_pricing; // Changed from session_pricing to sessions_pricing
+  // Calculate session price based on device type
+  const pricing = settings.session_pricing[deviceType];
   let pricePerPlayer = 0;
 
   if (numberOfPlayers === 1 && pricing.single_player) {
@@ -25,19 +22,10 @@ export function calculateSessionValues(numberOfPlayers, settings) {
 
   const totalAmount = pricePerPlayer * numberOfPlayers;
 
-  // Calculate GG Points
-  const ggConfig = settings.ggpoints_config;
-  const ggPoints = Math.floor((totalAmount * (ggConfig?.reward_percentage || 0)) / 100);
-  const ggPointsValue = Math.floor(ggPoints / (ggConfig?.points_to_rupee_ratio || 1));
-
-  const result = {
+  return {
     totalAmount,
-    ggPoints,
-    ggPointsValue
+    pricePerPlayer
   };
-
-  console.log("calculateSessionValues result:", result);
-  return result;
 }
 
 export function calculateSessionClosePrice({ ggPoints, settings, total_amount }) {

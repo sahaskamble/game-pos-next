@@ -33,9 +33,22 @@ export function InventoryTable({ data, loading, fields, onEdit, onDelete, canMod
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [columnVisibility, setColumnVisibility] = React.useState({});
 
+  const formatDeviceType = (type) => {
+    switch (type) {
+      case 'PS':
+        return 'PlayStation';
+      case 'VR':
+        return 'Virtual Reality';
+      case 'SIM':
+        return 'Car Simulator';
+      default:
+        return type || '-';
+    }
+  };
+
   const columns = React.useMemo(() => {
     const baseColumns = fields.map(field => ({
-      accessorKey: field.name === "branch_id" ? "branch_id.name" : field.name,
+      accessorKey: field.name === "branch_id" ? "expand.branch_id.name" : field.name,
       header: ({ column }) => (
         <div
           className="cursor-pointer select-none flex items-center"
@@ -48,6 +61,17 @@ export function InventoryTable({ data, loading, fields, onEdit, onDelete, canMod
           }[column.getIsSorted()] ?? null}
         </div>
       ),
+      cell: ({ row }) => {
+        // Special handling for branch_id field
+        if (field.name === "branch_id") {
+          return row.original.expand?.branch_id?.name || '-';
+        }
+        // Special handling for device type
+        if (field.name === "type") {
+          return formatDeviceType(row.getValue(field.name));
+        }
+        return row.getValue(field.name === "branch_id" ? "expand.branch_id.name" : field.name);
+      }
     }));
 
     if (!canModify) return baseColumns;

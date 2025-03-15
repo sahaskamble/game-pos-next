@@ -18,7 +18,7 @@ import { Search, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import pb from "@/lib/pocketbase";
 import { calculateSessionValues } from "@/lib/utils/calculateSessionValues";
-import { toast } from "@/components/ui/sonner";  // or whatever toast library you're using
+import { toast } from "sonner";
 
 export default function BookingPage({ params }) {
   const { user } = useAuth(); // Add this line to get the authenticated user
@@ -289,8 +289,8 @@ export default function BookingPage({ params }) {
         const customer = await pb.collection('customers').getOne(customerId);
         const currentRewards = customer.total_rewards || 0;
 
-        await pb.collection('customers').update(customerId, {
-          total_rewards: currentRewards + calculations.ggPoints
+        await pb.collection('customers').update(customer?.id, {
+          total_rewards: currentRewards + calculations?.ggPoints
         });
       } catch (error) {
         console.error("Error updating customer rewards:", error);

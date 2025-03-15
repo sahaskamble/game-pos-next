@@ -1,24 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@/lib/context/AuthContext";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { RecentSessions } from "@/components/dashboard/RecentSessions";
 import { Card } from "@/components/ui/card";
-import { BarChart as BarChartIcon, Users, Timer, Wallet, Gamepad2 } from "lucide-react";
+import { Users, Timer, Wallet, Gamepad2, IndianRupee } from "lucide-react";
 import { useCollection } from "@/lib/hooks/useCollection";
+import { useAuth } from "@/lib/context/AuthContext";
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Cell
-} from 'recharts';
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -27,7 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { startOfWeek, startOfMonth, startOfYear, subDays, endOfDay } from 'date-fns';
+import { startOfWeek, startOfMonth, startOfYear } from 'date-fns';
+import DataFilter from "@/components/superAdmin/DataFilter";
+import { format } from 'date-fns';
 
 // Add these colors for the donut chart
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
@@ -41,95 +43,130 @@ const DATE_RANGE_OPTIONS = [
   { label: "Custom", value: "custom" },
 ];
 
-export default function Dashboard() {
+export default function DashboardPage() {
   const { user } = useAuth();
   const { data: sessions, loading: sessionsLoading } = useCollection("sessions", {
-    expand: "customer_id,branch_id,device_id"
+    expand: "customer_id,branch_id,device_id",
+    sort: '-created',
   });
+
+  // Update cashDrawerData fetch to filter by user_id
+  const { data: cashDrawerData } = useCollection("cashIndrawer", {
+    sort: '-created',
+    limit: 1,
+    expand: "branch_id"  // Optional: if you want to show branch info
+  });
+
   const { data: customers } = useCollection("customers");
   const { data: games } = useCollection("games");
-  const { data: devices } = useCollection("devices");
 
   // Date filter states
   const [dateRangeType, setDateRangeType] = useState("today");
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const [membershipFilter, setMembershipFilter] = useState("all"); // "all", "member", "non-member"
-  const [deviceTypeFilter, setDeviceTypeFilter] = useState("all");
+  const [startDate, setStartDate] = useState();
+  const [endDate, setEndDate] = useState();
+  const [selectedBranch, setSelectedBranch] = useState('');
+  const [filteredSessions, setFilteredSessions] = useState([]);
 
+  // Add this near the top with other state declarations
   const [stats, setStats] = useState({
     totalCustomers: 0,
     activeCustomers: 0,
     totalRevenue: 0,
     averageSessionDuration: 0,
-    mostPlayedGame: { name: '-', popularity_score: 0 },
+    mostPlayedGame: {
+      name: '-',
+      popularity_score: 0
+    },
+    peakPeriod: {
+      time: '-',
+      customers: 0
+    },
+    cashInDrawer: 0,
+    controllerCount: 0,
+    estimatedClosingBalance: 0
   });
-  const [chartData, setChartData] = useState([]);
+
+  // Also add gamePopularityData state since it's used in the pie chart
   const [gamePopularityData, setGamePopularityData] = useState([]);
+  const [chartData, setChartData] = useState([]);
 
   // Update date range based on selected option
   const updateDateRange = (option) => {
     const today = new Date();
-    let start = new Date();
-    let end = endOfDay(today);
+    let start, end;
 
     switch (option) {
-      case "today":
-        start = new Date(today.setHours(0, 0, 0, 0));
+      case "today": {
+        start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+        end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
         break;
-      case "yesterday":
-        start = subDays(today, 1);
-        start.setHours(0, 0, 0, 0);
-        end = subDays(today, 1);
-        end.setHours(23, 59, 59, 999);
+      }
+      case "yesterday": {
+        start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 0, 0, 0);
+        end = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 23, 59, 59);
         break;
-      case "this_week":
-        start = startOfWeek(today, { weekStartsOn: 1 }); // Week starts on Monday
+      }
+      case "this_week": {
+        start = startOfWeek(today, { weekStartsOn: 1 });
+        end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
         break;
-      case "this_month":
+      }
+      case "this_month": {
         start = startOfMonth(today);
+        end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
         break;
-      case "this_year":
+      }
+      case "this_year": {
         start = startOfYear(today);
+        end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
         break;
+      }
       case "custom":
-        // Keep existing custom dates
         return;
     }
 
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
+    const formatDate = (date) => {
+      return date.toISOString().split('T')[0];
+    };
+
+    setStartDate(formatDate(start));
+    setEndDate(formatDate(end));
   };
 
-  // Handle date range type change
   const handleDateRangeTypeChange = (value) => {
     setDateRangeType(value);
     updateDateRange(value);
   };
 
-  const filterSessions = (sessions) => {
-    if (!sessions) return [];
+  // Filter sessions based on date range and branch
+  useEffect(() => {
+    if (!sessions || !startDate || !endDate) return;
 
-    return sessions.filter(session => {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    let filtered = sessions.filter(session => {
       const sessionDate = new Date(session.created);
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59);
-
-      const dateInRange = sessionDate >= start && sessionDate <= end;
-
-      const membershipMatch =
-        membershipFilter === "all" ? true :
-          membershipFilter === "member" ? session.expand?.customer_id?.isMember :
-            !session.expand?.customer_id?.isMember;
-
-      const deviceMatch =
-        deviceTypeFilter === "all" ? true :
-          session.expand?.device_id?.type === deviceTypeFilter;
-
-      return dateInRange && membershipMatch && deviceMatch;
+      return sessionDate >= start && sessionDate <= end;
     });
-  };
+
+    // Apply branch filter if selected
+    if (selectedBranch) {
+      filtered = filtered.filter(session => session.branch_id === selectedBranch);
+    }
+
+    setFilteredSessions(filtered);
+  }, [sessions, startDate, endDate, selectedBranch]);
+
+  // Set initial date range
+  useEffect(() => {
+    if (sessions) {
+      updateDateRange("today");
+    }
+  }, [sessions]); // Only run when sessions first loads
 
   const prepareChartData = (filteredSessions, dateRangeType) => {
     if (dateRangeType === "today" || dateRangeType === "yesterday") {
@@ -139,7 +176,7 @@ export default function Dashboard() {
         .reduce((acc, session) => {
           const hour = new Date(session.session_in).getHours();
           const hourKey = `${hour}:00`;
-          
+
           const existingHour = acc.find(item => item.hour === hourKey);
           if (existingHour) {
             existingHour.revenue += session.total_amount || 0;
@@ -174,7 +211,7 @@ export default function Dashboard() {
         .reduce((acc, session) => {
           const date = new Date(session.session_in).toLocaleDateString();
           const existingDay = acc.find(item => item.hour === date);
-          
+
           if (existingDay) {
             existingDay.revenue += session.total_amount || 0;
             existingDay.sessions += 1;
@@ -194,12 +231,20 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (sessions?.length && customers?.length && games?.length) {
-      const filteredSessions = filterSessions(sessions);
-      
-      // Calculate stats
+    if (filteredSessions?.length && customers?.length && games?.length) {
+      // Get latest cash drawer amount from the most recent record
+      const latestCashDrawer = cashDrawerData?.[0];
+      const currentCashInDrawer = latestCashDrawer?.cash_in_drawer || 0;
+      const currentControllerCount = latestCashDrawer?.controller_count || 0;
+
+      // Calculate revenue from filtered sessions
       const revenue = filteredSessions.reduce((acc, session) => acc + (session.total_amount || 0), 0);
-      const activeSessions = filteredSessions.filter(s => s.status === "active").length;
+
+      // Calculate estimated closing balance
+      const estimatedClosing = currentCashInDrawer + revenue;
+
+      // Calculate number of active sessions
+      const activeSessions = filteredSessions.filter(session => session.status === 'Active').length;
 
       // Calculate average session duration for filtered sessions
       const completedSessions = filteredSessions.filter(s => s.status === "Closed");
@@ -215,38 +260,21 @@ export default function Dashboard() {
         return acc + (duration > 0 ? duration : 0);
       }, 0) / (completedSessions.length || 1);
 
-      // Calculate game popularity based on session count
-      const gameSessionCounts = games.reduce((acc, game) => {
-        const sessionCount = sessions.filter(s => s.game_id === game.id).length;
-        acc[game.id] = {
-          name: game.name,
-          sessions: sessionCount
-        };
-        return acc;
-      }, {});
+      // Find most played game based on popularity score
+      const mostPlayedGame = games.reduce((prev, current) =>
+        (prev.popularity_score > current.popularity_score) ? prev : current
+      );
 
-      // Find most played game based on session count
-      const mostPlayedGame = Object.values(gameSessionCounts)
-        .sort((a, b) => b.sessions - a.sessions)[0];
-
-      // Prepare game popularity data for bar chart
-      const gamePopularity = Object.values(gameSessionCounts)
-        .sort((a, b) => b.sessions - a.sessions)
+      // Prepare game popularity data for donut chart
+      const gamePopularity = games
+        .sort((a, b) => b.popularity_score - a.popularity_score)
         .slice(0, 5) // Take top 5 games
         .map(game => ({
           name: game.name,
-          sessions: game.sessions
+          value: game.popularity_score || 0
         }));
 
       setGamePopularityData(gamePopularity);
-
-      setStats(prevStats => ({
-        ...prevStats,
-        mostPlayedGame: {
-          name: mostPlayedGame?.name || '-',
-          sessions: mostPlayedGame?.sessions || 0
-        }
-      }));
 
       setStats({
         totalCustomers: customers.length,
@@ -264,9 +292,9 @@ export default function Dashboard() {
       setChartData(chartData);
 
       // Find peak period
-      const peakPeriod = chartData.reduce((peak, current) => 
+      const peakPeriod = chartData.reduce((peak, current) =>
         current.customers > (peak?.customers || 0) ? current : peak
-      , null);
+        , null);
 
       setStats(prevStats => ({
         ...prevStats,
@@ -281,12 +309,17 @@ export default function Dashboard() {
         peakPeriod: {
           time: peakPeriod?.hour,
           customers: peakPeriod?.customers || 0
-        }
+        },
+        cashInDrawer: currentCashInDrawer,
+        controller_count: currentControllerCount,
+        estimatedClosingBalance: estimatedClosing,
+        lastUpdated: latestCashDrawer?.created || null,  // Add this to show last update time
+        branchName: latestCashDrawer?.expand?.branch_id?.name || '-'  // Optional: if you want to show branch name
       }));
     }
-  }, [sessions, customers, games, startDate, endDate, dateRangeType, membershipFilter, deviceTypeFilter]);
+  }, [filteredSessions, customers, games, cashDrawerData, dateRangeType]);
 
-  if (sessionsLoading) {
+  if (sessionsLoading || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -295,9 +328,12 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-8 p-8">
+    <div className="container px-8 mx-auto py-10 space-y-8">
       {/* Filters */}
       <div className="flex flex-wrap gap-4 items-center">
+        <DataFilter
+          onBranchChange={setSelectedBranch}
+        />
         <Select value={dateRangeType} onValueChange={handleDateRangeTypeChange}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Select date range" />
@@ -311,7 +347,6 @@ export default function Dashboard() {
           </SelectContent>
         </Select>
 
-        {/* Show date range picker only for custom option */}
         {dateRangeType === "custom" && (
           <div className="flex gap-2 items-center">
             <Input
@@ -329,69 +364,73 @@ export default function Dashboard() {
             />
           </div>
         )}
-
-        <Select value={membershipFilter} onValueChange={setMembershipFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Membership" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Customers</SelectItem>
-            <SelectItem value="member">Members Only</SelectItem>
-            <SelectItem value="non-member">Non-Members</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={deviceTypeFilter} onValueChange={setDeviceTypeFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Device Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Devices</SelectItem>
-            <SelectItem value="PS">PS5</SelectItem>
-            <SelectItem value="VR">VR Games</SelectItem>
-            <SelectItem value="SIM">Car Simulator</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Customers"
           value={stats.totalCustomers}
           icon={Users}
+          className="lg:col-span-1"
         />
         <StatsCard
           title="Active Customers"
           value={stats.activeCustomers}
           icon={Users}
-        />
-        <StatsCard
-          title="Total Revenue"
-          value={`₹${stats.totalRevenue}`}
-          icon={Wallet}
+          className="lg:col-span-1"
         />
         <StatsCard
           title="Avg. Session Duration"
           value={`${stats.averageSessionDuration} min`}
           icon={Timer}
+          className="lg:col-span-1"
         />
         <StatsCard
           title="Most Played Game"
-          value={`${stats.mostPlayedGame.name} (${stats.mostPlayedGame.sessions} sessions)`}
+          value={stats.mostPlayedGame.name}
           icon={Gamepad2}
+          className="lg:col-span-1"
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatsCard
+          title="Cash in Drawer"
+          value={`₹${stats.cashInDrawer.toLocaleString()}`}
+          subtitle={stats.lastUpdated ? `Last updated: ${format(new Date(stats.lastUpdated), "dd/MM/yyyy HH:mm")}` : 'No data'}
+          icon={IndianRupee}
+          className="lg:col-span-1"
+        />
+        <StatsCard
+          title="Total Revenue"
+          value={`₹${stats.totalRevenue.toLocaleString()}`}
+          icon={Wallet}
+          className="lg:col-span-1"
+        />
+        <StatsCard
+          title="Est. Closing Balance"
+          value={`₹${stats.estimatedClosingBalance.toLocaleString()}`}
+          icon={IndianRupee}
+          className="lg:col-span-1 bg-green-50"
+        />
+        <StatsCard
+          title="Controllers"
+          value={stats.controller_count}
+          icon={Gamepad2}
+          className="lg:col-span-1"
         />
       </div>
 
       <div className="w-full grid gap-4 grid-cols-1 md:grid-cols-5 md:grid-rows-1">
-        <Card className="p-6 col-span-3 row-span-1">
+        <Card className="p-6 col-span-4 row-span-1">
           <div className="flex justify-between items-center mb-4">
             <div className="text-xl font-bold">
-              {dateRangeType === "today" || dateRangeType === "yesterday" 
-                ? "24 Hour Traffic" 
+              {dateRangeType === "today" || dateRangeType === "yesterday"
+                ? "24 Hour Traffic"
                 : "Traffic Overview"}
             </div>
             <div className="text-sm text-muted-foreground">
-              Peak {dateRangeType === "today" || dateRangeType === "yesterday" ? "Hour" : "Day"}: 
+              Peak {dateRangeType === "today" || dateRangeType === "yesterday" ? "Hour" : "Day"}:
               {stats.peakPeriod?.time} ({stats.peakPeriod?.customers} customers)
             </div>
           </div>
@@ -480,23 +519,25 @@ export default function Dashboard() {
           </div>
         </Card>
 
-        <Card className="p-6 col-span-4 md:col-span-2 row-span-1">
+        <Card className="p-6 col-span-4 md:col-span-1 row-span-1">
           <div className="text-xl font-bold mb-4">Game Popularity</div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={gamePopularityData}
-                layout="vertical"
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  width={100}
-                  tick={{ fontSize: 12 }}
-                />
+              <PieChart>
+                <Pie
+                  data={gamePopularityData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {gamePopularityData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
                 <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
@@ -507,7 +548,7 @@ export default function Dashboard() {
                               {payload[0].payload.name}
                             </span>
                             <span className="font-bold text-muted-foreground">
-                              Sessions: {payload[0].value}
+                              Score: {payload[0].value}
                             </span>
                           </div>
                         </div>
@@ -516,25 +557,13 @@ export default function Dashboard() {
                     return null;
                   }}
                 />
-                <Bar
-                  dataKey="sessions"
-                  fill="#8884d8"
-                  radius={[0, 4, 4, 0]}
-                >
-                  {gamePopularityData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`}
-                      fill={`hsl(${index * 25 + 200}, 70%, 60%)`}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
+              </PieChart>
             </ResponsiveContainer>
           </div>
         </Card>
       </div>
 
-      <RecentSessions sessions={sessions.slice(-5)} />
+      <RecentSessions sessions={filteredSessions.slice(-5)} />
     </div>
   );
 }

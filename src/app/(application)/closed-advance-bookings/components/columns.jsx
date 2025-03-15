@@ -43,23 +43,26 @@ export const columns = [
     id: "created_by",
     accessorKey: "expand.created_by.username",
     header: "Created By",
+    cell: ({ row }) => row.original.expand?.created_by?.username || '-',
   },
   {
     id: "closed_by",
     accessorKey: "expand.closed_by.username",
     header: "Closed By",
+    cell: ({ row }) => row.original.expand?.closed_by?.username || '-',
+  },
+  {
+    id: "closed_at",
+    accessorKey: "closed_at",
+    header: "Closed At",
+    cell: ({ row }) => {
+      const closedAt = row.getValue("closed_at");
+      return closedAt ? format(new Date(closedAt), "PPpp") : '-';
+    },
   },
   {
     id: "branch",
     accessorKey: "expand.branch_id.name",
     header: "Branch",
-  },
-  {
-    id: "created",
-    accessorKey: "created",
-    header: "Created At",
-    cell: ({ row }) => {
-      return format(new Date(row.getValue("created")), "PPpp");
-    },
   },
 ];

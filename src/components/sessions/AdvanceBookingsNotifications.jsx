@@ -15,7 +15,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/context/AuthContext";
-import { format_Date } from "@/lib/utils/formatDates";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function AdvanceBookingsNotifications() {
   const { data: bookings, updateItem: updateBooking, mutate } = useCollection("advance_bookings", {
@@ -87,7 +87,7 @@ export function AdvanceBookingsNotifications() {
         <SheetHeader>
           <SheetTitle>Today's Advance Bookings</SheetTitle>
         </SheetHeader>
-        <div className="mt-6 space-y-4">
+        <ScrollArea className="h-[85dvh] w-full mt-6 space-y-4">
           {filteredBookings?.length === 0 ? (
             <p className="text-center text-muted-foreground">No active advance bookings for today</p>
           ) : (
@@ -119,7 +119,7 @@ export function AdvanceBookingsNotifications() {
               </div>
             ))
           )}
-        </div>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   );

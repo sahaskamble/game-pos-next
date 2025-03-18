@@ -68,8 +68,8 @@ export function CustomerTable({ customers, sessions }) {
     },
     {
       accessorKey: "total_rewards",
-      header: "Total Rewards",
-      cell: ({ row }) => row.original.total_rewards || 0,
+      header: "Wallet",
+      cell: ({ row }) => `${row.original.total_rewards} GG` || 0,
     },
     {
       accessorKey: "created",

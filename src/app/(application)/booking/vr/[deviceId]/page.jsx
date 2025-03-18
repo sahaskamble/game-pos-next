@@ -36,6 +36,7 @@ export default function VRSessionBooking({ params }) {
 		customer_id: '',
 		game_id: '',
 		payment_mode: '',
+		session_in: new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 16),
 		selectedSnacks: []
 	});
 	const [calculations, setCalculations] = useState({
@@ -84,7 +85,7 @@ export default function VRSessionBooking({ params }) {
 			}
 
 			// Calculate session end time
-			const sessionIn = new Date();
+			const sessionIn = new Date(formData.session_in);
 
 			// Create the session
 			const session = await createSession({

@@ -14,6 +14,7 @@ import { useState } from "react";
 import { useCollection } from "@/lib/hooks/useCollection";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/context/AuthContext";
+import { Check, Search } from "lucide-react";
 
 export function AddSessionDialog({ open, onOpenChange, onSubmit }) {
   const { user } = useAuth();
@@ -26,8 +27,13 @@ export function AddSessionDialog({ open, onOpenChange, onSubmit }) {
     branch_id: '',
     created_by: user?.id
   });
+  const [customerInput, setCustomerInput] = useState({
+    customer_name: "",
+    phone: ""
+  });
+  const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
 
-  const { data: customers } = useCollection("customers");
+  const { data: customers, createItem: createCustomer } = useCollection("customers");
   const { data: branches } = useCollection('branches');
 
   const handleSubmit = async (e) => {
@@ -82,6 +88,45 @@ export function AddSessionDialog({ open, onOpenChange, onSubmit }) {
     }
   };
 
+  const filteredCustomers = customers?.filter(customer =>
+    customer.customer_name.toLowerCase().includes(customerInput.customer_name.toLowerCase())
+  );
+
+  const handleCustomerSelect = (customer) => {
+    setFormData(prev => ({ ...prev, customer_id: customer.id }));
+    setCustomerInput({
+      customer_name: customer.customer_name,
+      phone: customer.customer_contact
+    });
+    setShowCustomerSuggestions(false);
+  };
+
+  const handleNewCustomer = async () => {
+    try {
+      if (!customerInput.customer_name || !customerInput.phone) {
+        toast.error("Please fill in both customer name and phone");
+        return;
+      }
+
+      const newCustomer = await createCustomer({
+        customer_name: customerInput.customer_name,
+        customer_contact: customerInput.phone,
+        total_visits: 1,
+        total_rewards: 0,
+        branch_id: formData.branch_id,
+        user_id: user?.id,
+        isMember: false,
+      });
+
+      // Update form data with the new customer ID
+      setFormData(prev => ({ ...prev, customer_id: newCustomer.id }));
+      return newCustomer;
+    } catch (error) {
+      console.error("Error creating customer:", error);
+      toast.error("Failed to create customer");
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -89,23 +134,78 @@ export function AddSessionDialog({ open, onOpenChange, onSubmit }) {
           <DialogTitle>Advance Booking</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label>Customer</Label>
-            <Select
-              value={formData.customer_id}
-              onValueChange={(value) => setFormData({ ...formData, customer_id: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select customer" />
-              </SelectTrigger>
-              <SelectContent>
-                {customers?.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    {customer.customer_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-2">
+            <div className="space-y-2">
+              <Label htmlFor="customer_name">Customer Name</Label>
+              <div className="relative">
+                <Input
+                  id="customer_name"
+                  value={customerInput.customer_name}
+                  onChange={(e) => {
+                    setCustomerInput(prev => ({
+                      ...prev,
+                      customer_name: e.target.value
+                    }));
+                    setShowCustomerSuggestions(true);
+                    setFormData(prev => ({ ...prev, customer_id: "" }));
+                  }}
+                  className="pr-8"
+                  placeholder='eg; John Doe'
+                />
+                <Search className="absolute right-2 top-2.5 h-5 w-5 text-gray-400" />
+
+                {/* Customer suggestions dropdown */}
+                {showCustomerSuggestions && customerInput.customer_name && filteredCustomers?.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border rounded-md shadow-lg">
+                    {filteredCustomers.map(customer => (
+                      <div
+                        key={customer.id}
+                        className="flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                        onClick={() => handleCustomerSelect(customer)}
+                      >
+                        <div>
+                          <div>{customer.customer_name}</div>
+                          <div className="text-sm text-gray-500">{customer.phone}</div>
+                        </div>
+                        {formData.customer_id === customer.id && (
+                          <Check className="h-4 w-4 text-green-500" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                value={customerInput.phone}
+                onChange={(e) => {
+                  setCustomerInput(prev => ({
+                    ...prev,
+                    phone: e.target.value
+                  }));
+                  setFormData(prev => ({ ...prev, customer_id: "" }));
+                }}
+                placeholder='eg; 1234567890'
+                maxLength={10}
+                minLength={10}
+              />
+            </div>
+
+            {/* Show this button only when no existing customer is selected and inputs are filled */}
+            {!formData.customer_id && customerInput.customer_name && customerInput.phone && (
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full"
+                onClick={handleNewCustomer}
+              >
+                Add as New Customer
+              </Button>
+            )}
           </div>
 
           <div>

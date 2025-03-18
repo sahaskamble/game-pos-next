@@ -1,10 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { toast } from "sonner";
+// import { toast } from "sonner";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useCollection } from "@/lib/hooks/useCollection";
 import { differenceInMinutes } from 'date-fns';
 import { Button } from '../ui/button';
-import { NOTIFICATION_SOUND_PATH } from '@/constants/main';
+import { NOTIFICATION_PATH, NOTIFICATION_SOUND_PATH } from '@/constants/main';
+import Link from 'next/link';
+import { X } from 'lucide-react';
 
 // Define constant for notification sound path
 export function SessionNotifications() {
@@ -13,6 +16,7 @@ export function SessionNotifications() {
     expand: 'device_id,customer_id'
   });
 
+  const [isOpen, setIsOpen] = useState(true);
   const [checkedSessions, setCheckedSessions] = useState(new Set());
   const [notifiedFiveMin, setNotifiedFiveMin] = useState(new Set());
   const [notifiedEnd, setNotifiedEnd] = useState(new Set());
@@ -21,6 +25,9 @@ export function SessionNotifications() {
   const [isMobile, setIsMobile] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [notificationAudio, setNotificationAudio] = useState(null);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [notificationContent, setNotificationContent] = useState({ title: '', body: '' });
+  const [currentSession, setCurrentSession] = useState(null);
 
   // Detect if user is on mobile device
   useEffect(() => {
@@ -109,21 +116,16 @@ export function SessionNotifications() {
   };
 
   // Function to send browser notification with enhanced mobile support
-  const sendBrowserNotification = (title, body, url = '/') => {
+  const sendBrowserNotification = (title, body, url = '/', sessionData = null) => {
     // Play notification sound
     playNotificationSound();
 
-    // Show toast notification (most reliable across all platforms)
-    try {
-      toast(title, {
-        description: body,
-        duration: 10000,
-      });
-    } catch (error) {
-      console.error('Toast error:', error);
-    }
+    // Show dialog notification
+    setNotificationContent({ title, body });
+    setCurrentSession(sessionData);
+    setIsNotificationOpen(true);
 
-    // Browser notification for desktop and mobile browsers that support it
+    // Show browser notification for desktop and mobile browsers that support it
     if (notificationPermission === 'granted' && 'Notification' in window) {
       try {
         // Enhanced notification options for mobile browsers
@@ -207,7 +209,8 @@ export function SessionNotifications() {
           sendBrowserNotification(
             "Session Ending Soon",
             `Session for ${deviceName} (${customerName}) ends in ${timeUntilEnd} minutes`,
-            sessionUrl
+            sessionUrl,
+            session
           );
 
           // Mark as notified
@@ -220,7 +223,8 @@ export function SessionNotifications() {
           sendBrowserNotification(
             "Session Ended",
             `Session for ${deviceName} (${customerName}) has ended`,
-            sessionUrl
+            sessionUrl,
+            session
           );
 
           // Mark as notified
@@ -314,18 +318,62 @@ export function SessionNotifications() {
   // Show permission button only if needed
   if (notificationPermission !== 'granted' && notificationPermission !== 'denied') {
     return (
-      <div className="fixed bottom-4 right-4 z-50">
-        <Button
-          variant="default"
-          size={isMobile ? "lg" : "default"}
-          className={isMobile ? "px-6 py-3 text-lg" : ""}
-          onClick={requestNotificationPermission}
-        >
-          {isMobile ? 'Enable Sound & Notifications' : 'Enable Notifications'}
-        </Button>
-      </div>
+      <>
+        <Dialog open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
+          <DialogContent className="max-w-none w-screen h-screen p-0 rounded-none">
+            <DialogHeader className="p-6">
+              <DialogTitle>{notificationContent.title}</DialogTitle>
+              <DialogDescription>{notificationContent.body}</DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+
+        <div className="fixed bottom-4 right-4 z-50">
+          <Button
+            variant="default"
+            size={isMobile ? "lg" : "default"}
+            className={isMobile ? "px-6 py-3 text-lg" : ""}
+            onClick={requestNotificationPermission}
+          >
+            {isMobile ? 'Enable Sound & Notifications' : 'Enable Notifications'}
+          </Button>
+        </div>
+      </>
     );
   }
 
-  return null;
+  return (
+    <Dialog open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
+      <DialogContent className="max-w-none w-screen md:h-screen h-auto p-0 rounded-none">
+        <DialogHeader className="p-6">
+          <DialogTitle className='text-xl md:text-4xl'>{notificationContent.title}</DialogTitle>
+          <DialogDescription className='text-lg md:text-2xl'>{notificationContent.body}</DialogDescription>
+        </DialogHeader>
+
+        <div className="w-full h-[60dvh] border-none">
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="w-full h-full object-contain border-0 outline-none"
+          >
+            <source src={NOTIFICATION_PATH} type="video/mp4" />
+          </video>
+        </div>
+
+        <div className="p-6 mt-auto" onClick={() => setIsNotificationOpen(false)}>
+          <Link
+            href={currentSession?.expand?.device_id?.type === 'VR'
+              ? `/booking/vr/close/${currentSession?.device_id}`
+              : `/booking/close/${currentSession?.device_id}`}
+            className="w-full px-4 py-3 bg-red-500 hover:bg-red-600 text-white inline-flex justify-center items-center rounded-lg gap-2 transition-colors"
+          >
+            <X className="h-5 w-5" />
+            <span>Close Session</span>
+          </Link>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }

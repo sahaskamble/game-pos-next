@@ -23,7 +23,6 @@ function GameReports() {
     popularGame: '',
     averagePlayTime: 0
   });
-
   const [monthlyPlaytime, setMonthlyPlaytime] = useState([]);
   const [popularityData, setPopularityData] = useState([]);
   const [revenueData, setRevenueData] = useState([]);
@@ -33,7 +32,7 @@ function GameReports() {
     if (games && sessions) {
       // Calculate basic stats
       const totalGames = games.length;
-      const activeGames = games.filter(game => game.status === 'active').length;
+      let activeGames = games.filter(game => game.status === 'active').length;
 
       // Calculate game popularity and average playtime
       const gameStats = games.reduce((acc, game) => {
@@ -135,7 +134,10 @@ function GameReports() {
   }
 
   return (
-    <div className="flex flex-col w-full min-h-screen">
+    <div className="flex flex-col w-full min-h-screen p-4">
+      <div className="flex items-center justify-between p-4 pb-6">
+        <h1 className="text-2xl font-bold">Game Report</h1>
+      </div>
       {/* Stats Cards */}
       <div className="p-6">
         <div className="grid auto-rows-min gap-4 md:grid-cols-4">

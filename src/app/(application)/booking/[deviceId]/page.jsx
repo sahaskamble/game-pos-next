@@ -70,6 +70,7 @@ export default function BookingPage({ params }) {
     customer_id: "",
     game_id: "",
     no_of_players: 1,
+    session_in: new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 16),
     duration: 15, // Changed default to 15 minutes
     duration_unit: "minutes", // Add new state for duration unit
     payment_mode: "Cash",
@@ -243,6 +244,11 @@ export default function BookingPage({ params }) {
         return;
       }
 
+      if (!formData.session_in) {
+        toast.error("Please select a In-Time");
+        return;
+      }
+
       if (!user) {
         toast.error("User not authenticated");
         return;
@@ -264,7 +270,7 @@ export default function BookingPage({ params }) {
       }
 
       // Calculate session end time
-      const sessionIn = new Date();
+      const sessionIn = new Date(formData.session_in);
       const sessionOut = new Date(sessionIn);
 
       // Add duration based on unit
@@ -392,6 +398,14 @@ export default function BookingPage({ params }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-4">
             <div className="space-y-2">
+              <Label htmlFor="phone">In-Time</Label>
+              <Input
+                type="datetime-local"
+                value={formData.session_in}
+                onChange={(e) => setFormData({ ...formData, session_in: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="customer_name">Customer Name</Label>
               <div className="relative">
                 <Input
@@ -475,7 +489,7 @@ export default function BookingPage({ params }) {
               </SelectTrigger>
               <SelectContent>
                 {games
-                  ?.filter((game) => game.branch_id === branchId)
+                  ?.filter((game) => game.branch_id === branchId && game?.type !== 'VR')
                   ?.map(game => (
                     <SelectItem key={game.id} value={game.id}>
                       {game.name}

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
-import { RecentSessions } from "@/components/dashboard/RecentSessions";
 import { Card } from "@/components/ui/card";
 import { Users, Timer, Wallet, Gamepad2, IndianRupee } from "lucide-react";
 import { useCollection } from "@/lib/hooks/useCollection";
@@ -31,6 +30,7 @@ import { startOfWeek, startOfMonth, startOfYear } from 'date-fns';
 import DataFilter from "@/components/superAdmin/DataFilter";
 import { format } from 'date-fns';
 import { format_Date } from "@/lib/utils/formatDates";
+import { SessionsTable } from "@/components/sessions/SessionsTable";
 
 // Add these colors for the donut chart
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
@@ -47,19 +47,19 @@ const DATE_RANGE_OPTIONS = [
 export default function DashboardPage() {
   const { user } = useAuth();
   const { data: sessions, loading: sessionsLoading } = useCollection("sessions", {
-    expand: "customer_id,branch_id,device_id",
+    expand: 'customer_id,branch_id,device_id,game_id,session_snacks.snack_id,user_id,billed_by',
     sort: '-created',
   });
 
   // Update cashDrawerData fetch to filter by user_id
   const { data: cashDrawerData } = useCollection("cashIndrawer", {
     sort: '-created',
-    limit: 1,
-    expand: "branch_id"  // Optional: if you want to show branch info
+    expand: "branch_id"
   });
 
   const { data: customers } = useCollection("customers");
   const { data: games } = useCollection("games");
+  const { data: branches } = useCollection("branches");
 
   // Date filter states
   const [dateRangeType, setDateRangeType] = useState();
@@ -234,13 +234,42 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (filteredSessions?.length && customers?.length && games?.length) {
-      // Get latest cash drawer amount from the most recent record
-      const latestCashDrawer = cashDrawerData?.[0];
-      const currentCashInDrawer = latestCashDrawer?.cash_in_drawer || 0;
-      const currentControllerCount = latestCashDrawer?.controller_count || 0;
+      // Get latest cash drawer data for each branch
+      let branchCashDrawers = {};
+
+      if (branches?.length && cashDrawerData?.length) {
+        branchCashDrawers = branches.reduce((acc, branch) => {
+          // Find the latest cash drawer record for this branch
+          const latestDrawer = cashDrawerData
+            .filter(drawer => drawer.branch_id === branch.id)
+            .sort((a, b) => new Date(b.created) - new Date(a.created))[0];
+
+          acc[branch.id] = {
+            cashInDrawer: latestDrawer?.withdraw_from_drawer?.amount || 0,
+            controllerCount: latestDrawer?.controller_count || 0
+          };
+          return acc;
+        }, {});
+      }
+
+      // Get current branch's cash drawer data if branch is selected
+      let currentCashInDrawer = 0;
+      let currentControllerCount = 0;
+
+      if (selectedBranch) {
+        currentCashInDrawer = branchCashDrawers[selectedBranch]?.cashInDrawer || 0;
+        currentControllerCount = branchCashDrawers[selectedBranch]?.controllerCount || 0;
+      } else {
+        // Sum up all branches' cash drawer amounts if no branch is selected
+        currentCashInDrawer = Object.values(branchCashDrawers)
+          .reduce((sum, drawer) => sum + drawer.cashInDrawer, 0);
+        currentControllerCount = Object.values(branchCashDrawers)
+          .reduce((sum, drawer) => sum + drawer.controllerCount, 0);
+      }
 
       // Calculate revenue from filtered sessions
-      const revenue = filteredSessions.reduce((acc, session) => acc + (session.total_amount || 0), 0);
+      const revenue = filteredSessions.reduce((acc, session) =>
+        acc + (session.total_amount || 0), 0);
 
       // Calculate estimated closing balance
       const estimatedClosing = currentCashInDrawer + revenue;
@@ -312,14 +341,12 @@ export default function DashboardPage() {
           time: peakPeriod?.hour,
           customers: peakPeriod?.customers || 0
         },
-        cashInDrawer: currentCashInDrawer,
-        controller_count: currentControllerCount,
+        cashInDrawer: currentCashInDrawer || 0,
+        controllerCount: currentControllerCount || 0,
         estimatedClosingBalance: estimatedClosing,
-        lastUpdated: latestCashDrawer?.created || null,  // Add this to show last update time
-        branchName: latestCashDrawer?.expand?.branch_id?.name || '-'  // Optional: if you want to show branch name
       }));
     }
-  }, [filteredSessions, customers, games, cashDrawerData, dateRangeType]);
+  }, [filteredSessions, customers, games, cashDrawerData, dateRangeType, branches, selectedBranch]);
 
   if (sessionsLoading || !user) {
     return (
@@ -417,7 +444,7 @@ export default function DashboardPage() {
         />
         <StatsCard
           title="Controllers"
-          value={stats.controller_count}
+          value={stats.controllerCount}
           icon={Gamepad2}
           className="lg:col-span-1"
         />
@@ -565,7 +592,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <RecentSessions sessions={filteredSessions.slice(-5)} />
+      <SessionsTable loading={sessionsLoading} data={filteredSessions.slice(-5)} displayEditDel={false} />
     </div>
   );
 }

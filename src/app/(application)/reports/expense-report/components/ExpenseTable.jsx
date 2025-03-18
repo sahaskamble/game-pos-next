@@ -84,7 +84,7 @@ export function ExpenseTable({ expenses }) {
           }[column.getIsSorted()] ?? null}
         </div>
       ),
-      cell: ({ row }) => `Rs. ${row.original.amount.toLocaleString()}`,
+      cell: ({ row }) => `Rs. ${row.original?.amount?.toLocaleString()}`,
     },
     {
       accessorKey: "created_by",

@@ -14,7 +14,7 @@ export default function BookingPage() {
   const [selectedBranch, setSelectedBranch] = useState('');
   const [filteredDevices, setFilteredDevices] = useState([]);
 
-  const { data: devices, loading } = useCollection("devices", {
+  const { data: devices, loading, mutate } = useCollection("devices", {
     expand: 'branch_id',
   });
 
@@ -42,6 +42,7 @@ export default function BookingPage() {
   }, {});
 
   const onChanged = () => {
+    mutate();
     router.refresh();
   }
 

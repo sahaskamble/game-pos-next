@@ -44,6 +44,15 @@ class PocketBaseService {
     }
   }
 
+  async getFullList(collection, options = {}) {
+    try {
+      this.pb.autoCancellation(false);
+      return await this.pb.collection(collection).getFullList(options);
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   async getOne(collection, id) {
     try {
       return await this.pb.collection(collection).getOne(id);

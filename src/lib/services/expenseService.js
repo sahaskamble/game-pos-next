@@ -18,7 +18,6 @@ export const getExpenses = async () => {
           amount: item.withdraw_from_drawer.amount,
           created_by: item.withdraw_from_drawer.taken_by || 'Unknown',
           status: item.status || 'completed',
-          receipt_url: item.receipt_url,
           branch_id: item.branch_id
         };
       });
@@ -39,27 +38,43 @@ export const getExpenseStats = (expenses) => {
     recentExpenses: []
   };
 
-  const stats = expenses.reduce((acc, expense) => {
-    // Total expenses
-    acc.totalExpenses += expense.amount;
+  const stats = expenses
+    ?.filter((expense) => expense?.category !== 'Drawer')
+    ?.reduce((acc, expense) => {
+      // Total expenses
+      acc.totalExpenses += Number(expense.amount) || 0;
 
-    // Category totals
-    acc.categoryTotals[expense.category] = (acc.categoryTotals[expense.category] || 0) + expense.amount;
+      // Category totals
+      acc.categoryTotals[expense.category] = (acc.categoryTotals[expense.category] || 0) + (Number(expense.amount) || 0);
 
-    // Monthly expenses
-    const month = new Date(expense.created).toLocaleString('default', { month: 'short' });
-    acc.monthlyExpenses[month] = (acc.monthlyExpenses[month] || 0) + expense.amount;
+      // Monthly expenses
+      // Parse the date string (DD/MM/YYYY, HH:mm aa)
+      const [datePart] = expense.date.split(',');
+      const [day, month, year] = datePart.split('/');
+      const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'short' });
+      
+      acc.monthlyExpenses[monthName] = (acc.monthlyExpenses[monthName] || 0) + (Number(expense.amount) || 0);
 
-    return acc;
-  }, {
-    totalExpenses: 0,
-    categoryTotals: {},
-    monthlyExpenses: {},
-  });
+      return acc;
+    }, {
+      totalExpenses: 0,
+      categoryTotals: {},
+      monthlyExpenses: {},
+    });
 
   // Get recent expenses (last 5)
   stats.recentExpenses = expenses
-    .sort((a, b) => new Date(b.created) - new Date(a.created))
+    .sort((a, b) => {
+      const [aDatePart] = a.date.split(',');
+      const [aDay, aMonth, aYear] = aDatePart.split('/');
+      const aDate = new Date(aYear, aMonth - 1, aDay);
+
+      const [bDatePart] = b.date.split(',');
+      const [bDay, bMonth, bYear] = bDatePart.split('/');
+      const bDate = new Date(bYear, bMonth - 1, bDay);
+
+      return bDate - aDate;
+    })
     .slice(0, 5);
 
   return stats;

@@ -97,22 +97,6 @@ function StaffTable({ data = [] }) {
       ),
       cell: ({ row }) => row.original.daysPresent || '0'
     },
-    {
-      accessorKey: "daysAbsent",
-      header: ({ column }) => (
-        <div
-          className="cursor-pointer select-none flex items-center"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Days Absent
-          {{
-            asc: " 🔼",
-            desc: " 🔽",
-          }[column.getIsSorted()] ?? null}
-        </div>
-      ),
-      cell: ({ row }) => row.original.daysAbsent || '0'
-    },
     // Create a separate column for each branch
     ...uniqueBranches.map(branchName => ({
       id: `branch_${branchName}`,

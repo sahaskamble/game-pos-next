@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardContent } from "@/components/ui/card";
 import { useCollection } from "@/lib/hooks/useCollection";
-import { AirplayIcon, Car, Clock, CookieIcon, Timer, TvIcon, Users, X } from "lucide-react";
+import { AirplayIcon, Car, Clock, CookieIcon, MapPin, Timer, TvIcon, Users, X } from "lucide-react";
 import { FaPlaystation } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -23,7 +23,6 @@ export default function RenderDeviceSection({ devices, title, icon }) {
         return 'bg-gray-500/10 text-gray-500 border-gray-500/20 text-sm px-2 py-1';
     }
   };
-
 
   return (
     <div className="space-y-4 pt-4">
@@ -65,7 +64,7 @@ export default function RenderDeviceSection({ devices, title, icon }) {
                 )}
               </div>
 
-              {device.status === "booked" && (
+              {device.status === "booked" && device.type !== 'VR' && (
                 <div className="text-sm text-gray-400">
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
@@ -80,10 +79,17 @@ export default function RenderDeviceSection({ devices, title, icon }) {
                 </div>
               )}
 
+              <div className="text-sm text-gray-400">
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  <span>Branch: {device.expand.branch_id.name}</span>
+                </div>
+              </div>
+
               {device.status === "booked" ? (
                 <div className="flex gap-2">
                   <Link
-                    href={`/booking/extend/${device.id}`}
+                    href={device?.type === 'VR' ? `/booking/vr/extend/${device.id}` : `/booking/extend/${device.id}`}
                     className="w-full px-2 py-2 bg-yellow-500 inline-flex justify-center items-center rounded-lg"
                   >
                     <Timer className="h-4 w-4" color='#fff' />
@@ -95,7 +101,7 @@ export default function RenderDeviceSection({ devices, title, icon }) {
                     <CookieIcon className="h-4 w-4" />
                   </Link>
                   <Link
-                    href={`/booking/close/${device.id}`}
+                    href={device?.type === 'VR' ? `/booking/vr/close/${device.id}` : `/booking/close/${device.id}`}
                     className="w-full px-2 py-2 bg-red-500 inline-flex justify-center items-center rounded-lg"
                   >
                     <X className="h-4 w-4" />
@@ -104,7 +110,15 @@ export default function RenderDeviceSection({ devices, title, icon }) {
               ) : (
                 <Button
                   className="w-full"
-                  onClick={(() => router.push(`/booking/${device.id}`))}
+                  onClick={(
+                    () => {
+                      if (device?.type === 'VR') {
+                        router.push(`/booking/vr/${device.id}`)
+                      } else {
+                        router.push(`/booking/${device.id}`)
+                      }
+                    }
+                  )}
                 >
                   Book Now
                 </Button>

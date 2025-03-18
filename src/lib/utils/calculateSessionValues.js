@@ -1,15 +1,7 @@
-export function calculateSessionValues(numberOfPlayers, settings, deviceType = 'vr') {
-  if (!settings?.session_pricing?.[deviceType]) {
-    console.error(`Pricing configuration is missing for device type: ${deviceType}`);
-    return {
-      totalAmount: 0,
-      ggPoints: 0,
-      ggPointsValue: 0
-    };
-  }
+export function calculateSessionValues(numberOfPlayers, settings) {
 
   // Calculate session price based on device type
-  const pricing = settings.session_pricing[deviceType];
+  const pricing = settings.sessions_pricing;
   let pricePerPlayer = 0;
 
   if (numberOfPlayers === 1 && pricing.single_player) {

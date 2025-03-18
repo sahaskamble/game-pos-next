@@ -6,10 +6,9 @@ import { useAuth } from "@/lib/context/AuthContext";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./components/columns";
 import { AddCashlogDialog } from "./components/AddCashlogDialog";
-import { BranchCashStats } from "./components/BranchCashStats";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { startOfWeek, startOfMonth, startOfYear, subDays, endOfDay } from 'date-fns';
+import { startOfWeek, startOfMonth, startOfYear } from 'date-fns';
 import DataFilter from "@/components/superAdmin/DataFilter";
 
 const DATE_RANGE_OPTIONS = [
@@ -25,19 +24,16 @@ export default function CashlogPage() {
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [needsInitialCashDrawer, setNeedsInitialCashDrawer] = useState(false);
   const [filteredCashlogs, setFilteredCashlogs] = useState([]);
   const [dateRangeType, setDateRangeType] = useState("today");
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState();
+  const [endDate, setEndDate] = useState();
   const [selectedBranch, setSelectedBranch] = useState('');
 
   const { data: cashlogs, loading, mutate } = useCollection("cashlog", {
     expand: "drawer_id,user_id,branch_id",
     sort: "-created",
   });
-
-  const { data: branches } = useCollection("branches");
 
   useEffect(() => {
     if (user) {
@@ -50,16 +46,17 @@ export default function CashlogPage() {
   const updateDateRange = (option) => {
     const today = new Date();
     let start = new Date();
-    let end = endOfDay(today);
+    let end = new Date();
+    end.setHours(23, 59, 59, 999);
 
     switch (option) {
       case "today":
-        start = new Date(today.setHours(0, 0, 0, 0));
+        start.setHours(0, 0, 0, 0);
         break;
       case "yesterday":
-        start = subDays(today, 1);
+        start.setDate(today.getDate() - 1);
+        end.setDate(today.getDate() - 1);
         start.setHours(0, 0, 0, 0);
-        end = subDays(today, 1);
         end.setHours(23, 59, 59, 999);
         break;
       case "this_week":
@@ -75,8 +72,16 @@ export default function CashlogPage() {
         return;
     }
 
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
+    // Format dates in YYYY-MM-DD format without timezone conversion
+    const formatDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    setStartDate(formatDate(start));
+    setEndDate(formatDate(end));
   };
 
   const handleDateRangeTypeChange = (value) => {
@@ -86,6 +91,10 @@ export default function CashlogPage() {
 
   // Filter cashlogs based on date range and branch
   useEffect(() => {
+    // Initialise, by default today's date
+    if (!startDate || !endDate) {
+      handleDateRangeTypeChange('today');
+    }
     if (cashlogs) {
       let filtered = cashlogs.filter(cashlog => {
         // First filter out Drawer category for non-SuperAdmin users
@@ -112,10 +121,6 @@ export default function CashlogPage() {
 
   return (
     <div className="container px-8 mx-auto py-10 space-y-8">
-      {/* Branch-wise Stats */}
-      {(isAdmin || isSuperAdmin) && (
-        <BranchCashStats cashlogs={filteredCashlogs} branches={branches} />
-      )}
 
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Cash Log</h2>

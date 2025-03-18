@@ -35,10 +35,36 @@ export default function BookingPage({ params }) {
   const { data: settings } = useCollection("settings");
   const { createItem: createSession } = useCollection("sessions");
   const { createItem: createSessionSnack } = useCollection("session_snack");
+  const [branchId, setBranchId] = useState('');
+  const [deviceSettings, setDeviceSettings] = useState();
 
   useEffect(() => {
-    console.log("Current settings:", settings);
-  }, [settings]);
+    if (settings && device) {
+      const device_settings = settings.filter((setting) =>
+        setting.type === device[0]?.type && setting?.branch_id === device[0]?.branch_id
+      );
+      if (device_settings?.[0]) {
+        setDeviceSettings(device_settings?.[0]);
+      }
+    }
+  }, [settings, device]);
+
+  useEffect(() => {
+    // Use setTimeout to ensure the page has loaded and state has been updated
+    const checkSettings = setTimeout(() => {
+      // Only check if we have the required data and no settings were found
+      if (settings &&
+        device &&
+        device?.length > 0 &&
+        (!deviceSettings || deviceSettings.length === 0)
+      ) {
+        toast.error('No Settings found for this device type');
+        router.push('/booking');
+      }
+    }, 1000); // 1 second delay
+
+    return () => clearTimeout(checkSettings); // Cleanup timeout
+  }, [deviceSettings, settings, device, router]);
 
   const [formData, setFormData] = useState({
     customer_id: "",
@@ -64,9 +90,15 @@ export default function BookingPage({ params }) {
 
   const handlePlayersChange = (e) => {
     const value = parseInt(e.target.value) || 1;
+    const maxPlayers = device?.[0]?.max_players || 4;
+
+    if (value > maxPlayers) {
+      toast.warning(`Maximum ${maxPlayers} players allowed`);
+    }
+
     setFormData(prev => ({
       ...prev,
-      no_of_players: Math.max(1, Math.min(value, device?.[0]?.max_players || 4))
+      no_of_players: Math.max(1, Math.min(value, maxPlayers))
     }));
   };
 
@@ -93,15 +125,6 @@ export default function BookingPage({ params }) {
         }
         return snack;
       }).filter(snack => snack.quantity > 0)
-    }));
-  };
-
-  const handleDiscountChange = (type, value) => {
-    setFormData(prev => ({
-      ...prev,
-      discount_type: type,
-      discount_percentage: type === 'percentage' ? parseFloat(value) || 0 : 0,
-      discount_amount: type === 'amount' ? parseFloat(value) || 0 : 0
     }));
   };
 
@@ -136,6 +159,11 @@ export default function BookingPage({ params }) {
       const newCustomer = await createCustomer({
         customer_name: customerInput.customer_name,
         customer_contact: customerInput.phone,
+        total_visits: 1,
+        total_rewards: 0,
+        branch_id: branchId,
+        user_id: user?.id,
+        isMember: false,
       });
 
       // Update form data with the new customer ID
@@ -149,75 +177,61 @@ export default function BookingPage({ params }) {
 
   // Calculate totals whenever relevant data changes
   useEffect(() => {
+    const fetchData = () => {
+      const branch_id = localStorage.getItem('branch_id');
+      setBranchId(branch_id);
+      // Convert duration to hours for calculation
+      const durationInHours = formData.duration_unit === "minutes"
+        ? formData.duration / 60
+        : formData.duration;
+
+      // Calculate base price
+      const sessionValues = calculateSessionValues(formData.no_of_players, deviceSettings);
+      const basePrice = sessionValues.totalAmount * durationInHours;
+
+      // Calculate snacks total
+      const snacksTotal = formData.selectedSnacks.reduce((acc, snack) => {
+        return acc + (snack.price * snack.quantity);
+      }, 0);
+
+      // Calculate discount
+      let discountAmount = 0;
+      if (formData.discount_type === 'percentage') {
+        discountAmount = (basePrice + snacksTotal) * (formData.discount_percentage / 100);
+      } else {
+        discountAmount = formData.discount_amount;
+      }
+
+      const totalBeforeDiscount = basePrice + snacksTotal;
+      const finalTotal = totalBeforeDiscount - discountAmount;
+
+      // Calculate GG Points
+      const ggConfig = deviceSettings.ggpoints_config;
+      const ggPoints = Math.floor((basePrice * ggConfig.reward_percentage) / 100);
+      const ggPointsValue = Math.floor(ggPoints / ggConfig.points_to_rupee_ratio);
+      setCalculations({
+        baseAmount: basePrice,
+        snacksTotal,
+        discountAmount,
+        totalAmount: finalTotal,
+        ggPoints,
+        ggPointsValue,
+      });
+    }
+
     // Early return if no settings or formData
-    if (!settings?.[0]) {
-      console.log("No settings available yet");
-      return;
+    if (deviceSettings && deviceSettings?.length !== 0) {
+      switch (device[0]?.type) {
+        case 'PS':
+          fetchData();
+          break;
+        case 'SIM':
+          fetchData();
+          break;
+      }
     }
 
-    if (!formData.no_of_players) {
-      console.log("No players selected yet");
-      return;
-    }
-
-    // Convert duration to hours for calculation
-    const durationInHours = formData.duration_unit === "minutes"
-      ? formData.duration / 60
-      : formData.duration;
-
-    console.log("Calculating with:", {
-      players: formData.no_of_players,
-      settings: settings[0],
-      duration: durationInHours
-    });
-
-    // Calculate base price
-    const sessionValues = calculateSessionValues(formData.no_of_players, settings[0]);
-    const basePrice = sessionValues.totalAmount * durationInHours;
-
-    console.log("Base price calculated:", basePrice);
-
-    // Calculate snacks total
-    const snacksTotal = formData.selectedSnacks.reduce((acc, snack) => {
-      return acc + (snack.price * snack.quantity);
-    }, 0);
-
-    console.log("Snacks total:", snacksTotal);
-
-    // Calculate discount
-    let discountAmount = 0;
-    if (formData.discount_type === 'percentage') {
-      discountAmount = (basePrice + snacksTotal) * (formData.discount_percentage / 100);
-    } else {
-      discountAmount = formData.discount_amount;
-    }
-
-    const totalBeforeDiscount = basePrice + snacksTotal;
-    const finalTotal = totalBeforeDiscount - discountAmount;
-
-    // Calculate GG Points
-    const ggConfig = settings[0].ggpoints_config;
-    const ggPoints = Math.floor((finalTotal * ggConfig.reward_percentage) / 100);
-    const ggPointsValue = Math.floor(ggPoints / ggConfig.points_to_rupee_ratio);
-
-    console.log("Final calculations:", {
-      baseAmount: basePrice,
-      snacksTotal,
-      discountAmount,
-      totalAmount: finalTotal,
-      ggPoints,
-      ggPointsValue
-    });
-
-    setCalculations({
-      baseAmount: basePrice,
-      snacksTotal,
-      discountAmount,
-      totalAmount: finalTotal,
-      ggPoints,
-      ggPointsValue,
-    });
-  }, [formData.no_of_players, formData.duration, formData.duration_unit, formData.selectedSnacks, formData.discount_type, formData.discount_percentage, formData.discount_amount, settings]);
+  }, [formData.no_of_players, formData.duration, formData.duration_unit, formData.selectedSnacks, formData.discount_type, formData.discount_percentage, formData.discount_amount, deviceSettings]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -265,7 +279,7 @@ export default function BookingPage({ params }) {
         device_id: deviceId,
         customer_id: customerId,
         game_id: formData.game_id,
-        branch_id: user.branch_id,
+        branch_id: branchId,
         user_id: user.id,
         no_of_players: formData.no_of_players,
         duration: formData.duration,
@@ -319,7 +333,7 @@ export default function BookingPage({ params }) {
             snack_id: snack.id,
             quantity: snack.quantity,
             price: snack.price * snack.quantity,
-            branch_id: user.branch_id,
+            branch_id: branchId,
             user_id: user.id,
           });
 
@@ -352,17 +366,14 @@ export default function BookingPage({ params }) {
   };
 
   // Add new states for session management
-  const [showExtendDialog, setShowExtendDialog] = useState(false);
-  const [showAddSnackDialog, setShowAddSnackDialog] = useState(false);
-  const [extensionHours, setExtensionHours] = useState(1);
   const [currentSession, setCurrentSession] = useState(null);
 
   // Get current session if device is booked
   useEffect(() => {
-    if (device?.[0]?.status === "Booked" && device[0].current_session) {
+    if (device?.[0]?.status === "Booked" && device?.[0]?.current_session) {
       const fetchSession = async () => {
         try {
-          const session = await pb.collection('sessions').getOne(device[0].current_session, {
+          const session = await pb.collection('sessions').getOne(device[0]?.current_session, {
             expand: 'customer_id,game_id'
           });
           setCurrentSession(session);
@@ -463,61 +474,69 @@ export default function BookingPage({ params }) {
                 <SelectValue placeholder="Select Game" />
               </SelectTrigger>
               <SelectContent>
-                {games?.map(game => (
-                  <SelectItem key={game.id} value={game.id}>
-                    {game.name}
-                  </SelectItem>
-                ))}
+                {games
+                  ?.filter((game) => game.branch_id === branchId)
+                  ?.map(game => (
+                    <SelectItem key={game.id} value={game.id}>
+                      {game.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
 
           {/* Number of Players Input */}
-          <div className="space-y-2">
-            <Label>Number of Players</Label>
-            <Input
-              type="number"
-              placeholder="Number of Players"
-              value={formData.no_of_players}
-              onChange={handlePlayersChange}
-              min={1}
-              max={device?.[0]?.max_players || 4}
-            />
-          </div>
-
-          {/* Duration Select */}
-          <div className="grid grid-cols-2 gap-4">
+          {device?.[0]?.type === 'PS' && (
             <div className="space-y-2">
-              <Label htmlFor="duration">Duration</Label>
+              <Label>Number of Players</Label>
               <Input
-                id="duration"
                 type="number"
-                min={formData.duration_unit === "minutes" ? 15 : 1}
-                step={formData.duration_unit === "minutes" ? 15 : 1}
-                value={formData.duration}
-                onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+                placeholder="Number of Players"
+                value={formData.no_of_players}
+                onChange={handlePlayersChange}
+                min={1}
+                max={device?.[0]?.max_players || 4}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="duration_unit">Duration Unit</Label>
-              <Select
-                value={formData.duration_unit}
-                onValueChange={(value) => {
-                  // Reset duration when switching units
-                  const newDuration = value === "minutes" ? 15 : 1;
-                  setFormData({ ...formData, duration_unit: value, duration: newDuration });
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select unit" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="minutes">Minutes</SelectItem>
-                  <SelectItem value="hours">Hours</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          )}
+
+          {/* Duration Select */}
+          {
+            device?.[0]?.type !== 'VR' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="duration">Duration</Label>
+                  <Input
+                    id="duration"
+                    type="number"
+                    min={formData.duration_unit === "minutes" ? 15 : 1}
+                    step={formData.duration_unit === "minutes" ? 15 : 1}
+                    value={formData.duration}
+                    onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="duration_unit">Duration Unit</Label>
+                  <Select
+                    value={formData.duration_unit}
+                    onValueChange={(value) => {
+                      // Reset duration when switching units
+                      const newDuration = value === "minutes" ? 15 : 1;
+                      setFormData({ ...formData, duration_unit: value, duration: newDuration });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select unit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="minutes">Minutes</SelectItem>
+                      <SelectItem value="hours">Hours</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )
+          }
 
           <div className="space-y-2">
             <h3 className="font-semibold">Add Snacks</h3>
@@ -526,12 +545,13 @@ export default function BookingPage({ params }) {
                 <SelectValue placeholder="Add Snack" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="select">Select Snack</SelectItem>
-                {snacks?.map(snack => (
-                  <SelectItem key={snack.id} value={snack.id}>
-                    {snack.name} - ₹{snack.price}
-                  </SelectItem>
-                ))}
+                {snacks
+                  ?.filter((snack) => snack?.branch_id === branchId && snack.quanity > 0)
+                  ?.map(snack => (
+                    <SelectItem key={snack.id} value={snack.id}>
+                      {snack.name} - ₹{snack.price}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
 

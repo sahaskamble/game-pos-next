@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/context/AuthContext";
+import { format_Date } from "@/lib/utils/formatDates";
 
 export function AdvanceBookingsNotifications() {
   const { data: bookings, updateItem: updateBooking, mutate } = useCollection("advance_bookings", {
@@ -56,7 +57,7 @@ export function AdvanceBookingsNotifications() {
       await updateBooking(bookingId, {
         status: "Closed",
         closed_by: user?.id,
-        closed_at: new Date().toISOString().slice(0, 16)
+        closed_at: new Date().toISOString().replace("T", " ").replace("Z", "Z")
       });
       toast.success("Booking marked as closed");
     } catch (error) {

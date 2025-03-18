@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export const columns = [
   {
@@ -64,5 +65,24 @@ export const columns = [
     id: "branch",
     accessorKey: "expand.branch_id.name",
     header: "Branch",
+  },
+  {
+    id: "actions",
+    header: "Actions",
+    cell: ({ row, table }) => {
+      const booking = row.original;
+      const isActive = booking.status === "Active";
+      
+      return (
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={!isActive}
+          onClick={() => table.options.meta?.handleMarkAsClosed(booking.id)}
+        >
+          Mark as Closed
+        </Button>
+      );
+    },
   },
 ];

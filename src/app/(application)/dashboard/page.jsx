@@ -30,6 +30,7 @@ import {
 import { startOfWeek, startOfMonth, startOfYear } from 'date-fns';
 import DataFilter from "@/components/superAdmin/DataFilter";
 import { format } from 'date-fns';
+import { format_Date } from "@/lib/utils/formatDates";
 
 // Add these colors for the donut chart
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
@@ -61,7 +62,7 @@ export default function DashboardPage() {
   const { data: games } = useCollection("games");
 
   // Date filter states
-  const [dateRangeType, setDateRangeType] = useState("today");
+  const [dateRangeType, setDateRangeType] = useState();
   const [startDate, setStartDate] = useState();
   const [endDate, setEndDate] = useState();
   const [selectedBranch, setSelectedBranch] = useState('');
@@ -125,12 +126,8 @@ export default function DashboardPage() {
         return;
     }
 
-    const formatDate = (date) => {
-      return date.toISOString().split('T')[0];
-    };
-
-    setStartDate(formatDate(start));
-    setEndDate(formatDate(end));
+    setStartDate(format_Date(start));
+    setEndDate(format_Date(end));
   };
 
   const handleDateRangeTypeChange = (value) => {
@@ -140,7 +137,12 @@ export default function DashboardPage() {
 
   // Filter sessions based on date range and branch
   useEffect(() => {
-    if (!sessions || !startDate || !endDate) return;
+    if (!sessions) return;
+
+    // Initialise, by default today's date
+    if (!startDate || !endDate) {
+      handleDateRangeTypeChange('today');
+    }
 
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);

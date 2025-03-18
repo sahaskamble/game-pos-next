@@ -1,6 +1,6 @@
 'use client';
 
-import { Gamepad2, Moon, Sun } from "lucide-react"
+import { Moon, Sun } from "lucide-react"
 import { LoginForm } from "@/components/login-form"
 import { useTheme } from "next-themes";
 import { CompanyName, darkThemeLogo, lightThemeLogo, loginBackground } from "@/constants/main";

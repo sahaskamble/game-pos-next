@@ -37,6 +37,8 @@ import { columns } from "./columns";
 import { CSVExport } from "@/components/Table2CSV";
 import { PDFExport } from "@/components/Table2PDF";
 import { useAuth } from "@/lib/context/AuthContext";
+import { useCollection } from "@/lib/hooks/useCollection";
+import { toast } from "sonner";
 
 const FILTER_OPTIONS = [
   { label: "Customer", value: "customer_name" },
@@ -52,6 +54,27 @@ export function AdvanceBookingsTable({ data = [], loading }) {
   const [columnVisibility, setColumnVisibility] = React.useState({});
   const [selectedColumn, setSelectedColumn] = React.useState("customer_name");
   const { user } = useAuth();
+  const { updateItem: updateBooking, mutate } = useCollection("advance_bookings");
+
+  const handleMarkAsClosed = async (bookingId) => {
+    if (!user?.id) {
+      toast.error('Please login first to access this feature.')
+      return;
+    }
+    try {
+      await updateBooking(bookingId, {
+        status: "Closed",
+        closed_by: user?.id,
+        closed_at: new Date().toISOString().replace("T", " ").replace("Z", "Z")
+      });
+      toast.success("Booking marked as closed");
+    } catch (error) {
+      console.error("Error updating booking:", error);
+      toast.error("Failed to update booking");
+    } finally {
+      mutate();
+    }
+  };
 
   const table = useReactTable({
     data,
@@ -67,6 +90,9 @@ export function AdvanceBookingsTable({ data = [], loading }) {
       sorting,
       columnFilters,
       columnVisibility,
+    },
+    meta: {
+      handleMarkAsClosed, // Pass the function to the table meta
     },
   });
 

@@ -26,7 +26,6 @@ export default function CloseSessionPage({ params }) {
 	const { data: devices, updateItem: updateDevice } = useCollection("devices");
 
 	const [device, setDevice] = useState({});
-	const [deviceSettings, setDeviceSettings] = useState();
 	const [session, setSession] = useState(null); // Session
 	const [customer, setCustomer] = useState(null); // Customer
 	const [loading, setLoading] = useState(true);
@@ -50,10 +49,6 @@ export default function CloseSessionPage({ params }) {
 			const foundDevice = devices.find(d => d.id === deviceId);
 			if (foundDevice) {
 				setDevice(foundDevice);
-				const device_settings = settings.find((setting) =>
-					setting.type === foundDevice.type && setting.branch_id === foundDevice.branch_id
-				);
-				setDeviceSettings(device_settings);
 			}
 		}
 	}, [deviceId, devices]);
@@ -63,7 +58,7 @@ export default function CloseSessionPage({ params }) {
 		const fetchData = async () => {
 			try {
 				if (!device?.id) return;
-				if (!settings || !deviceSettings) return;
+				if (!settings) return;
 
 				const matchingSession = sessions.find((s) => s.device_id === device.id && s.status === 'Active');
 				if (matchingSession) {
@@ -77,7 +72,7 @@ export default function CloseSessionPage({ params }) {
 					const closingVariables = calculateSessionClosePrice({
 						ggPoints: 0,
 						total_amount: sessionTotalAmount,
-						settings: deviceSettings
+						settings: settings?.[0]
 					});
 
 					setMaxGGPoints((closingVariables?.maxGGPriceToBeUsed > matchingCustomer?.total_rewards) ? matchingCustomer?.total_rewards : closingVariables?.maxGGPriceToBeUsed);
@@ -134,7 +129,7 @@ export default function CloseSessionPage({ params }) {
 			const closingVariables = calculateSessionClosePrice({
 				ggPoints: formData.gg_point_used,
 				total_amount: baseAmount,
-				settings: deviceSettings
+				settings: settings?.[0]
 			});
 
 			newFormData.gg_price = closingVariables?.ggPrice || 0;
@@ -221,6 +216,7 @@ export default function CloseSessionPage({ params }) {
 				amount_paid: finalAmount,
 				discount_amount: formData.discount_amount,
 				discount_percentage: formData.discount_percentage,
+				session_out: new Date().toISOString(),
 				rewardPointsUsed: formData.gg_point_used,
 				payment_mode: formData.payment_mode,
 				Cash: formData.payment_mode === "Cash" ? finalAmount :
@@ -244,8 +240,6 @@ export default function CloseSessionPage({ params }) {
 				});
 
 			}
-
-
 			router.replace('/booking')
 		} catch (error) {
 			console.error("Error closing session:", error);

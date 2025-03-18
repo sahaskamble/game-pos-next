@@ -61,8 +61,8 @@ export default function RoleChanger({ role }) {
 				icon: <Settings className="w-4 h-4" />
 			},
 			{
-				label: "Closed Adv Bookings",
-				path: "/closed-advance-bookings",
+				label: "Adv Bookings",
+				path: "/advance-bookings",
 				icon: <CalendarCheckIcon className="w-4 h-4" />
 			},
 			{

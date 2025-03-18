@@ -10,10 +10,11 @@ import { AdvanceBookingsNotifications } from "@/components/sessions/AdvanceBooki
 import { useCollection } from "@/lib/hooks/useCollection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { startOfWeek, startOfMonth, startOfYear, subDays, endOfDay } from 'date-fns';
+import { startOfWeek, startOfMonth, startOfYear, } from 'date-fns';
 import DataFilter from "@/components/superAdmin/DataFilter";
 import { useAuth } from "@/lib/context/AuthContext";
 import { StatsCard } from "@/components/dashboard/StatsCard";
+import { format_Date } from "@/lib/utils/formatDates";
 
 const DATE_RANGE_OPTIONS = [
   { label: "Today", value: "today" },
@@ -48,24 +49,25 @@ export default function Sessions() {
   useEffect(() => {
     const today = new Date();
     setDateRangeType("today");
-    setStartDate(today.toISOString().split('T')[0]);
-    setEndDate(today.toISOString().split('T')[0]);
+    setStartDate(format_Date(today));
+    setEndDate(format_Date(today));
   }, []);
 
   // Update date range based on selected option
   const updateDateRange = (option) => {
     const today = new Date();
     let start = new Date();
-    let end = endOfDay(today);
+    let end = new Date();
+    end.setHours(23, 59, 59, 999);
 
     switch (option) {
       case "today":
-        start = new Date(today.setHours(0, 0, 0, 0));
+        start.setHours(0, 0, 0, 0);
         break;
       case "yesterday":
-        start = subDays(today, 1);
+        start.setDate(today.getDate() - 1);
+        end.setDate(today.getDate() - 1);
         start.setHours(0, 0, 0, 0);
-        end = subDays(today, 1);
         end.setHours(23, 59, 59, 999);
         break;
       case "this_week":
@@ -81,8 +83,8 @@ export default function Sessions() {
         return;
     }
 
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
+    setStartDate(format_Date(start));
+    setEndDate(format_Date(end));
   };
 
   const handleDateRangeTypeChange = (value) => {
@@ -115,7 +117,7 @@ export default function Sessions() {
       const stats = filteredSessions.reduce((acc, session) => {
         const totalAmount = session.amount_paid || 0;
         acc.totalRevenue += totalAmount;
-        
+
         // Assuming payment_mode field exists in your session data
         if (session.payment_mode === 'Cash') {
           acc.cashPayments += totalAmount;
@@ -125,7 +127,7 @@ export default function Sessions() {
           acc.cashPayments += session.Cash;
           acc.upiPayments += session.Upi;
         }
-        
+
         return acc;
       }, {
         totalRevenue: 0,

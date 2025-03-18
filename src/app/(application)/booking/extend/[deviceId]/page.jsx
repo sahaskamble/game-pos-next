@@ -23,6 +23,7 @@ export default function ExtendSessionPage({ params }) {
 	});
 
 	const [device, setDevice] = useState({});
+	const [deviceSettings, setDeviceSettings] = useState();
 	const [formData, setformData] = useState({
 		no_of_players: 1,
 		duration_unit: "minutes",
@@ -36,15 +37,31 @@ export default function ExtendSessionPage({ params }) {
 			const foundDevice = devices.find(d => d.id === deviceId);
 			if (foundDevice) {
 				setDevice(foundDevice);
+				const device_settings = settings.find((setting) =>
+					setting.type === foundDevice.type && setting.branch_id === foundDevice.branch_id
+				);
+				setDeviceSettings(device_settings);
 			}
 		}
-	}, [deviceId, devices]);
+	}, [deviceId, devices, deviceSettings]);
+
+	useEffect(() => {
+		// Use setTimeout to ensure the page has loaded and state has been updated
+		const checkSettings = setTimeout(() => {
+			if (!settings || device && (!deviceSettings || deviceSettings?.length === 0)) {
+				toast.error('No Settings found for this device type');
+				router.push('/booking');
+			}
+		}, 5000); // 5 second delay
+
+		return () => clearTimeout(checkSettings); // Cleanup timeout
+	}, [deviceSettings, settings, device, router]);
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		try {
 			// Early return before html loads  
-			if (!settings?.[0] || !formData.no_of_players) {
+			if (!deviceSettings || !formData.no_of_players) {
 				toast.error('Error extending session, please try again later....')
 				return;
 			}
@@ -54,10 +71,9 @@ export default function ExtendSessionPage({ params }) {
 
 			if (!session) {
 				toast.error('No active session found for this device');
+				router.push('/booking');
 				return;
 			}
-
-			console.log("Current session:", session);
 
 			// Convert duration to hours for calculation
 			const durationInHours = formData.duration_unit === "minutes"
@@ -65,7 +81,7 @@ export default function ExtendSessionPage({ params }) {
 				: formData.duration;
 
 			// Calculate base price
-			const sessionValues = calculateSessionValues(formData.no_of_players, settings[0]);
+			const sessionValues = calculateSessionValues(formData.no_of_players, deviceSettings);
 			const basePrice = sessionValues.totalAmount * durationInHours;
 
 			// Create a new Date object from session_out string
@@ -122,6 +138,11 @@ export default function ExtendSessionPage({ params }) {
 		setformData({ ...formData, duration: parseInt(value) });
 	}
 
+	useEffect(() => {
+		if (formData.no_of_players > device?.max_players) {
+			setformData({ ...formData, no_of_players: device?.max_players })
+		}
+	}, [formData.no_of_players]);
 
 	return (
 		<main className='p-8'>
@@ -137,6 +158,7 @@ export default function ExtendSessionPage({ params }) {
 							value={formData.no_of_players}
 							onChange={(e) => setformData({ ...formData, no_of_players: Number(e.target.value) })}
 							min={1}
+							max={device?.max_players || 4}
 						/>
 					</div>
 					<div className='grid gap-2'>

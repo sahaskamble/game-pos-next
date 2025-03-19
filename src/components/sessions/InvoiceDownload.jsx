@@ -70,7 +70,7 @@ const InvoiceDownload = ({ session }) => {
         </table>
 
         <div className="mt-4">
-          <p className="text-right font-bold">Base Amount: ₹{session.base_amount}</p>
+          <p className="text-right font-bold">Base Amount: ₹{session.session_amount}</p>
           {session.snacks_total > 0 && (
             <p className="text-right font-bold">Snacks Total: ₹{session.snacks_total}</p>
           )}

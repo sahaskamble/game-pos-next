@@ -104,6 +104,16 @@ export default function RoleChanger({ role }) {
 				path: "/cashlog",
 				icon: <Receipt className="w-4 h-4" />
 			},
+			{
+				label: "Sessions",
+				path: "/sessions",
+				icon: <CalendarDays className="w-4 h-4" />
+			},
+			{
+				label: "Bookings",
+				path: "/booking",
+				icon: <BookOpenCheck className="w-4 h-4" />
+			},
 		],
 		StoreManager: [
 			{

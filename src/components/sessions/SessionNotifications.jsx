@@ -344,23 +344,11 @@ export function SessionNotifications() {
 
   return (
     <Dialog open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
-      <DialogContent className="max-w-none w-screen md:h-screen h-auto p-0 rounded-none">
+      <DialogContent className="max-w-[80dvw] w-auto h-auto p-0 rounded-none">
         <DialogHeader className="p-6">
           <DialogTitle className='text-xl md:text-4xl'>{notificationContent.title}</DialogTitle>
           <DialogDescription className='text-lg md:text-2xl'>{notificationContent.body}</DialogDescription>
         </DialogHeader>
-
-        <div className="w-full h-[60dvh] border-none">
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="w-full h-full object-contain border-0 outline-none"
-          >
-            <source src={NOTIFICATION_PATH} type="video/mp4" />
-          </video>
-        </div>
 
         <div className="p-6 mt-auto" onClick={() => setIsNotificationOpen(false)}>
           <Link

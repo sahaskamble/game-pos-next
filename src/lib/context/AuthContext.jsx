@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
 
       // Retrieve user details
       const userId = authData.record.id;
-      const branchId = authData.record.branch_id;
+      const branchId = localStorage.getItem("branch_id");
 
       // Log the login details in PocketBase
       await pb.collection("staff_logins").create({

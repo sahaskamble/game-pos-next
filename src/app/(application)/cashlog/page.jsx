@@ -125,21 +125,27 @@ export default function CashlogPage() {
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold tracking-tight">Cash Log</h2>
         <div className="flex items-center gap-4">
-          <DataFilter
-            onBranchChange={setSelectedBranch}
-          />
-          <Select value={dateRangeType} onValueChange={handleDateRangeTypeChange}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Select date range" />
-            </SelectTrigger>
-            <SelectContent>
-              {DATE_RANGE_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {
+            isSuperAdmin && (
+              <>
+                <DataFilter
+                  onBranchChange={setSelectedBranch}
+                />
+                <Select value={dateRangeType} onValueChange={handleDateRangeTypeChange}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Select date range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DATE_RANGE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )
+          }
           {dateRangeType === "custom" && (
             <div className="flex gap-2 items-center">
               <Input

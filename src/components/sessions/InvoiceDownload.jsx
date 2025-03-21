@@ -39,7 +39,7 @@ const InvoiceDownload = ({ session }) => {
         <hr className="my-2" />
         <h3 className="font-bold text-blue-600">Customer Details</h3>
         <p><b>Name:</b> {session.expand?.customer_id?.customer_name}</p>
-        <p><b>Contact:</b> {session.expand?.customer_id?.customer_contact}</p>
+        <p><b>Contact:</b> {session.expand?.customer_id?.phone}</p>
         <p><b>Branch:</b> {session.expand?.branch_id?.name}</p>
         <p><b>Time:</b> {format(new Date(session.session_in), 'h:mm a')} - {session.session_out ? format(new Date(session.session_out), 'h:mm a') : 'Ongoing'}</p>
 
@@ -70,7 +70,7 @@ const InvoiceDownload = ({ session }) => {
         </table>
 
         <div className="mt-4">
-          <p className="text-right font-bold">Base Amount: ₹{session.session_amount}</p>
+          <p className="text-right font-bold">Base Amount: ₹{session.base_amount}</p>
           {session.snacks_total > 0 && (
             <p className="text-right font-bold">Snacks Total: ₹{session.snacks_total}</p>
           )}

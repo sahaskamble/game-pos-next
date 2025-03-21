@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import React, { useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -9,15 +9,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ChevronDown, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -26,23 +18,115 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PDFExport } from "../Table2PDF";
-import { CSVExport } from "../Table2CSV";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
+import { PDFExport } from "@/components/Table2PDF";
+import { CSVExport } from "@/components/Table2CSV";
+import { ExternalLink, Route, Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/lib/context/AuthContext";
+import Link from "next/link";
 
-export function DataTable({
-  data,
-  columns,
-  loading,
-  searchPlaceholder = "Filter...",
-  displayPdf,
-  displayCsv,
-  meta,
-}) {
-  const [sorting, setSorting] = React.useState([]);
-  const [columnFilters, setColumnFilters] = React.useState([]);
-  const [columnVisibility, setColumnVisibility] = React.useState({});
-  const [rowSelection, setRowSelection] = React.useState({});
+export function CustomerTable({ customers, sessions, displayMembership, customerInfo }) {
+  const { user } = useAuth();
+  const [sorting, setSorting] = useState([]);
+  const [columnFilters, setColumnFilters] = useState([]);
+  const [columnVisibility, setColumnVisibility] = useState({});
+
+  const columns = [
+    {
+      accessorKey: "created",
+      header: "Joined Date",
+      cell: ({ row }) => format(new Date(row.original.created), 'MMM dd, yyyy'),
+    },
+    {
+      accessorKey: "customer_name",
+      header: "Name",
+      cell: ({ row }) => row.original.customer_name,
+    },
+    {
+      accessorKey: "customer_contact",
+      header: "Contact",
+      cell: ({ row }) => <p>+91 {row.original.customer_contact}</p>,
+    },
+    {
+      accessorKey: "expand.branch_id.name",
+      header: "Branch",
+      cell: ({ row }) => (
+        <div>
+          {row.original.expand?.branch_id?.name || 'Not Assigned'}
+        </div>
+      ),
+    },
+    {
+      id: "sessionCount",
+      header: "Total Visits",
+      cell: ({ row }) => {
+        const sessionCount = sessions.filter(s => s.customer_id === row.original.id).length;
+        return sessionCount;
+      },
+    },
+    {
+      accessorKey: "isMember",
+      header: "Membership",
+      cell: ({ row }) => (
+        <div className={`font-medium ${row.original.isMember ? 'text-green-600' : 'text-red-600'}`}>
+          {row.original.isMember ? 'Member' : 'Non-Member'}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "wallet",
+      header: "Wallet",
+      cell: ({ row }) => `Rs. ${row.original.wallet || 0}`,
+    },
+    {
+      accessorKey: "total_rewards",
+      header: "GG Points",
+      cell: ({ row }) => `${row.original.total_rewards || 0} GG`,
+    },
+    {
+      id: "totalSpent",
+      header: "Amount Spent",
+      cell: ({ row }) => {
+        const customerSessions = sessions.filter(s => s.customer_id === row.original.id);
+        const totalSpent = customerSessions.reduce((sum, s) => sum + (s.total_amount || 0), 0);
+        return `Rs. ${totalSpent.toLocaleString()}`;
+      },
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const customer__info = row.original;
+        return (
+          <div className="flex gap-2">
+            <Button variant="ghost" size="icon" onClick={() => {
+              displayMembership(true);
+              customerInfo(customer__info)
+            }}>
+              <Route className="h-6 w-6" />
+            </Button>
+            {
+              user?.role === 'SuperAdmin' ? (
+                <Link href={`/customers/${customer__info.id}`}>
+                  <Button variant="ghost" size="icon">
+                    <ExternalLink className="h-6 w-6" />
+                  </Button>
+                </Link>
+              ) : null
+            }
+          </div>
+        );
+      },
+    }
+  ];
 
   // Get filterable columns (exclude action columns and columns with enableHiding: false)
   const filterableColumns = React.useMemo(() => {
@@ -64,7 +148,7 @@ export function DataTable({
   );
 
   const table = useReactTable({
-    data: data || [],
+    data: customers,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -73,33 +157,16 @@ export function DataTable({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
-      rowSelection,
     },
-    meta,
   });
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  // Don't render the filter section if there are no filterable columns
-  if (filterableColumns.length === 0) {
-    return (
-      <div className="w-full">
-        {/* Rest of the table without filter section */}
-        {/* ... */}
-      </div>
-    );
-  }
 
   return (
     <div className="w-full">
-      <div className="flex items-center gap-4 py-4">
+      <div className="flex items-center gap-4 py-4 justify-between">
         {selectedColumn && (
           <>
             <Select
@@ -131,28 +198,20 @@ export function DataTable({
             </div>
           </>
         )}
-
-        {displayPdf && (
-          <PDFExport
-            data={data}
-            columns={columns}
-            fileName="export.pdf"
-            title="Data Export"
-          />
-        )}
-        {displayCsv && (
-          <CSVExport
-            data={data}
-            columns={columns}
-            fileName="export.csv"
-          />
-        )}
-
+        <PDFExport
+          data={customers}
+          columns={columns}
+          fileName="Customers_Report.pdf"
+          title="Customers List"
+        />
+        <CSVExport
+          data={customers}
+          columns={columns}
+          fileName="Customers_Report.csv"
+        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
-              Columns <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
+            <Button variant="outline">Columns</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {table
@@ -180,26 +239,25 @@ export function DataTable({
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                  </TableHead>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                    </TableHead>
+                  );
+                })}
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                >
+                <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(
@@ -224,28 +282,22 @@ export function DataTable({
         </Table>
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          Previous
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          Next
+        </Button>
       </div>
     </div>
   );

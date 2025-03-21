@@ -41,17 +41,17 @@ export function AddSessionDialog({ open, onOpenChange, onSubmit }) {
 
     try {
       if (!formData.customer_id) {
-        toast.error("Please select a customer");
+        toast.warning("Please select a customer");
         return;
       }
 
       if (!formData.visiting_time) {
-        toast.error("Please select visiting time");
+        toast.warning("Please select visiting time");
         return;
       }
 
       if (formData.no_of_players < 1) {
-        toast.error("Number of players must be at least 1");
+        toast.warning("Number of players must be at least 1");
         return;
       }
 
@@ -61,27 +61,27 @@ export function AddSessionDialog({ open, onOpenChange, onSubmit }) {
         return;
       }
 
-      const sessionData = {
-        ...formData,
-        no_of_players: parseInt(formData.no_of_players),
-        visiting_time: visitingTime.toISOString(),
-      };
+      if (formData?.branch_id || formData.no_of_players > 1 || !isNaN(visitingTime) || formData.customer_id) {
+        const sessionData = {
+          ...formData,
+          no_of_players: parseInt(formData.no_of_players),
+          visiting_time: visitingTime.toISOString(),
+        };
+        await onSubmit(sessionData);
+        onOpenChange(false);
+        // Reset form
+        setFormData({
+          status: 'Active',
+          customer_id: '',
+          no_of_players: 1,
+          visiting_time: new Date().toISOString().slice(0, 16),
+          note: '',
+          branch_id: '',
+          created_by: user?.id
+        });
 
-      await onSubmit(sessionData);
-      onOpenChange(false);
-
-      // Reset form
-      setFormData({
-        status: 'Active',
-        customer_id: '',
-        no_of_players: 1,
-        visiting_time: new Date().toISOString().slice(0, 16),
-        note: '',
-        branch_id: '',
-        created_by: user?.id
-      });
-
-      toast.success("Session added successfully");
+        toast.success("Session added successfully");
+      }
     } catch (error) {
       console.error("Error creating session:", error);
       toast.error("Failed to create session");

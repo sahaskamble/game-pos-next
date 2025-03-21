@@ -94,34 +94,29 @@ export default function DashboardPage() {
   // Update date range based on selected option
   const updateDateRange = (option) => {
     const today = new Date();
-    let start, end;
+    let start = new Date();
+    let end = new Date();
+    end.setHours(23, 59, 59, 999);
 
     switch (option) {
-      case "today": {
-        start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-        end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+      case "today":
+        start.setHours(0, 0, 0, 0);
         break;
-      }
-      case "yesterday": {
-        start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 0, 0, 0);
-        end = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 23, 59, 59);
+      case "yesterday":
+        start.setDate(today.getDate() - 1);
+        end.setDate(today.getDate() - 1);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
         break;
-      }
-      case "this_week": {
+      case "this_week":
         start = startOfWeek(today, { weekStartsOn: 1 });
-        end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
         break;
-      }
-      case "this_month": {
+      case "this_month":
         start = startOfMonth(today);
-        end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
         break;
-      }
-      case "this_year": {
+      case "this_year":
         start = startOfYear(today);
-        end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
         break;
-      }
       case "custom":
         return;
     }
@@ -269,7 +264,7 @@ export default function DashboardPage() {
 
       // Calculate revenue from filtered sessions
       const revenue = filteredSessions.reduce((acc, session) =>
-        acc + (session.total_amount || 0), 0);
+        acc + (session.amount_paid || 0), 0);
 
       // Calculate estimated closing balance
       const estimatedClosing = currentCashInDrawer + revenue;

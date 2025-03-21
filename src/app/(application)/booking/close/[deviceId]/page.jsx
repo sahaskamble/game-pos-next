@@ -32,6 +32,7 @@ export default function CloseSessionPage({ params }) {
 	const [loading, setLoading] = useState(true);
 	const [formData, setFormData] = useState({
 		total_amount: 0,
+		session_amount: 0,
 		discount_unit: "percentage", // Changed from discount_type to discount_unit
 		discount_percentage: 0,
 		discount_amount: 0,
@@ -39,9 +40,11 @@ export default function CloseSessionPage({ params }) {
 		payment_mode: '', // Changed from a default value to empty string
 		gg_price: 0,
 		cash_amount: 0,
+		membership_amount: 0,
 		upi_amount: 0
 	});
 	const [maxGGPoints, setMaxGGPoints] = useState(0);
+	const [maxWallet, setMaxWallet] = useState(0);
 	const [finalAmount, setFinalAmount] = useState(0);
 
 	// First, get the device
@@ -81,10 +84,12 @@ export default function CloseSessionPage({ params }) {
 					});
 
 					setMaxGGPoints((closingVariables?.maxGGPriceToBeUsed > matchingCustomer?.total_rewards) ? matchingCustomer?.total_rewards : closingVariables?.maxGGPriceToBeUsed);
+					setMaxWallet((finalAmount > matchingCustomer?.wallet) ? matchingCustomer?.wallet : finalAmount);
 
 					setFormData({
 						...formData,
 						total_amount: sessionTotalAmount,
+						session_amount: matchingSession.session_amount,
 						gg_point_used: 0,
 						gg_price: 0,
 						discount_amount: 0,
@@ -104,7 +109,7 @@ export default function CloseSessionPage({ params }) {
 		if (sessions && settings && customers && device?.id) {
 			fetchData();
 		}
-	}, [device?.id, sessions, settings, customers]);
+	}, [device?.id, sessions, settings, customers, finalAmount]);
 
 	// Calculate final amount whenever discount values or GG points change
 	useEffect(() => {
@@ -119,16 +124,16 @@ export default function CloseSessionPage({ params }) {
 		const currentPaymentMode = formData.payment_mode;
 
 		if (formData.discount_unit === "percentage" && formData.discount_percentage > 0) {
-			newFormData.discount_amount = (baseAmount * formData.discount_percentage / 100).toFixed(2);
+			newFormData.discount_amount = (session.session_amount * formData.discount_percentage / 100).toFixed(2);
 			newFormData.gg_point_used = 0;
 			newFormData.gg_price = 0;
-			calculatedAmount = baseAmount - newFormData.discount_amount;
+			calculatedAmount = session.session_amount - newFormData.discount_amount;
 		}
 		else if (formData.discount_unit === "amount" && formData.discount_amount > 0) {
-			newFormData.discount_percentage = ((formData.discount_amount / baseAmount) * 100).toFixed(2);
+			newFormData.discount_percentage = ((formData.discount_amount / session.session_amount) * 100).toFixed(2);
 			newFormData.gg_point_used = 0;
 			newFormData.gg_price = 0;
-			calculatedAmount = baseAmount - formData.discount_amount;
+			calculatedAmount = session.session_amount - formData.discount_amount;
 		}
 		else if (formData.discount_unit === "gg_points" && formData.gg_point_used > 0) {
 			const closingVariables = calculateSessionClosePrice({
@@ -179,8 +184,8 @@ export default function CloseSessionPage({ params }) {
 				break;
 
 			case 'discount_amount':
-				if (value > (formData.total_amount * 0.5)) {
-					value = formData.total_amount * 0.5
+				if (value > (formData.session_amount * 0.5)) {
+					value = formData.session_amount * 0.5
 				}
 				break;
 		}
@@ -205,10 +210,16 @@ export default function CloseSessionPage({ params }) {
 			if (formData.payment_mode === "Part-paid") {
 				const cashAmount = parseFloat(formData.cash_amount) || 0;
 				const upiAmount = parseFloat(formData.upi_amount) || 0;
-				const totalPaid = cashAmount + upiAmount;
+				const membershipAmount = parseFloat(formData.membership_amount) || 0;
+				const totalPaid = cashAmount + upiAmount + membershipAmount;
 
 				if (totalPaid !== finalAmount) {
 					toast.error(`Total of Cash (₹${cashAmount}) and UPI (₹${upiAmount}) must equal final amount (₹${finalAmount})`);
+					return;
+				}
+			} else if (formData.payment_mode === "Membership") {
+				if (maxWallet < finalAmount) {
+					toast.error(`Not enough amount in wallet`);
 					return;
 				}
 			}
@@ -227,6 +238,8 @@ export default function CloseSessionPage({ params }) {
 					formData.payment_mode === "Part-paid" ? formData.cash_amount : 0,
 				Upi: formData.payment_mode === "Upi" ? finalAmount :
 					formData.payment_mode === "Part-paid" ? formData.upi_amount : 0,
+				MembershipPoints: formData.payment_mode === "Membership" ? finalAmount :
+					formData.payment_mode === "Part-paid" ? formData.membership_amount : 0,
 			});
 
 			// Update Device Status
@@ -238,14 +251,26 @@ export default function CloseSessionPage({ params }) {
 			// Update Wallet
 			const customer = customers?.find((customer_info) => customer_info?.id === session?.customer_id);
 			if (customer?.id) {
-				const totalPointsUsed = customer?.total_rewards - formData?.gg_point_used || 0;
+				const totalPointsUsed = customer?.total_rewards - formData?.gg_point_used;
+				let walletUsed;
+				switch (formData.payment_mode) {
+					case 'Membership':
+						walletUsed = finalAmount
+						break;
+					case 'Part-paid':
+						walletUsed = formData.membership_amount || 0
+						break;
+					default:
+						walletUsed = 0
+						break;
+				}
+				const totalWalletUsed = customer?.wallet - walletUsed;
 				await updateWallet(customer?.id, {
-					total_rewards: totalPointsUsed
+					total_rewards: totalPointsUsed,
+					wallet: totalWalletUsed
 				});
 
 			}
-
-
 			router.replace('/booking')
 		} catch (error) {
 			console.error("Error closing session:", error);
@@ -271,16 +296,28 @@ export default function CloseSessionPage({ params }) {
 				{/* Session Info */}
 				<section className='grid gap-2 text-muted-foreground'>
 					{customer && (
-						<div className='flex items-center flex-wrap justify-between px-4 pt-4 font-semibold'>
-							<div className='flex items-center gap-2'>
-								<h1 className='text-foreground'>Wallet:- </h1>
-								<p>{customer?.total_rewards || 0} GG </p>
+						<>
+							<div className='flex items-center flex-wrap justify-between px-4 pt-4 font-semibold'>
+								<div className='flex items-center gap-2'>
+									<h1 className='text-foreground'>Wallet:- </h1>
+									<p>Rs. {customer?.wallet || 0} </p>
+								</div>
+								<div className='flex items-center gap-2'>
+									<h1 className='text-foreground'>Max usage:- </h1>
+									<p>Rs. {maxWallet} </p>
+								</div>
 							</div>
-							<div className='flex items-center gap-2'>
-								<h1 className='text-foreground'>Max usage:- </h1>
-								<p>{maxGGPoints} GG </p>
+							<div className='flex items-center flex-wrap justify-between px-4 font-semibold'>
+								<div className='flex items-center gap-2'>
+									<h1 className='text-foreground'>GG Points:- </h1>
+									<p>{customer?.total_rewards || 0} GG </p>
+								</div>
+								<div className='flex items-center gap-2'>
+									<h1 className='text-foreground'>Max usage:- </h1>
+									<p>{maxGGPoints} GG </p>
+								</div>
 							</div>
-						</div>
+						</>
 					)}
 
 					{session && (
@@ -407,6 +444,7 @@ export default function CloseSessionPage({ params }) {
 								<SelectContent>
 									<SelectItem value="Upi">UPI</SelectItem>
 									<SelectItem value="Cash">Cash</SelectItem>
+									<SelectItem value="Membership">Membership</SelectItem>
 									<SelectItem value="Part-paid">Part-paid</SelectItem>
 								</SelectContent>
 							</Select>
@@ -442,11 +480,25 @@ export default function CloseSessionPage({ params }) {
 									/>
 								</div>
 
+								<div className="space-y-2">
+									<Label htmlFor="membership_amount">Membership Amount</Label>
+									<Input
+										type="number"
+										id="membership_amount"
+										name="membership_amount"
+										value={formData.membership_amount}
+										onChange={(e) => setFormData({ ...formData, membership_amount: parseFloat(e.target.value) || 0 })}
+										placeholder="Enter membership amount"
+										min="0"
+										max={customer?.wallet || 0}
+									/>
+								</div>
+
 								<div className="text-sm text-muted-foreground">
-									Total Entered: ₹{((formData.cash_amount || 0) + (formData.upi_amount || 0)).toFixed(2)}
-									{(formData.cash_amount || 0) + (formData.upi_amount || 0) !== finalAmount && (
+									Total Entered: ₹{((formData.cash_amount || 0) + (formData.upi_amount || 0) + (formData.membership_amount || 0)).toFixed(2)}
+									{(formData.cash_amount || 0) + (formData.upi_amount || 0) + (formData.membership_amount || 0) !== finalAmount && (
 										<span className="text-red-500 ml-2">
-											(Difference: ₹{(finalAmount - ((formData.cash_amount || 0) + (formData.upi_amount || 0))).toFixed(2)})
+											(Difference: ₹{(finalAmount - ((formData.cash_amount || 0) + (formData.upi_amount || 0) + (formData.membership_amount || 0))).toFixed(2)})
 										</span>
 									)}
 								</div>
@@ -456,7 +508,7 @@ export default function CloseSessionPage({ params }) {
 						<Button
 							disabled={
 								formData.payment_mode === 'Part-paid' &&
-								Math.abs(finalAmount - ((formData.cash_amount || 0) + (formData.upi_amount || 0))) > 0}
+								Math.abs(finalAmount - ((formData.cash_amount || 0) + (formData.upi_amount || 0) + (formData.membership_amount || 0))) > 0}
 							type="submit"
 							className="w-full"
 						>

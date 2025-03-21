@@ -17,7 +17,13 @@ import {
 	Users,
 	UserCog,
 	Gamepad2,
-	CalendarCheckIcon
+	CalendarCheckIcon,
+	Ticket,
+	Activity,
+	LogIn,
+	Cookie,
+	ChartNoAxesCombined,
+	HandCoins
 } from "lucide-react";
 
 export default function RoleChanger({ role }) {
@@ -51,19 +57,29 @@ export default function RoleChanger({ role }) {
 				icon: <BookOpenCheck className="w-4 h-4" />
 			},
 			{
+				label: "Customers",
+				path: "/customers",
+				icon: <Users className="w-4 h-4" />
+			},
+			{
+				label: "Membership Plans",
+				path: "/memberships",
+				icon: <Ticket className="w-4 h-4" />
+			},
+			{
 				label: "Cash Log",
 				path: "/cashlog",
 				icon: <Receipt className="w-4 h-4" />
 			},
 			{
-				label: "Settings",
-				path: "/settings",
-				icon: <Settings className="w-4 h-4" />
-			},
-			{
 				label: "Adv Bookings",
 				path: "/advance-bookings",
 				icon: <CalendarCheckIcon className="w-4 h-4" />
+			},
+			{
+				label: "Settings",
+				path: "/settings",
+				icon: <Settings className="w-4 h-4" />
 			},
 			{
 				label: "Reports",
@@ -92,17 +108,34 @@ export default function RoleChanger({ role }) {
 					},
 				]
 			},
+			{
+				label: "Logs",
+				path: "/logs",
+				icon: <Activity className="w-4 h-4" />,
+				subItems: [
+					{
+						label: "Login Logs",
+						path: "/logs/logins",
+						icon: <LogIn className="w-4 h-4" />
+					},
+					{
+						label: "Cashlog",
+						path: "/logs/cashlog",
+						icon: <HandCoins className="w-4 h-4" />
+					},
+					{
+						label: "Memberships Logs",
+						path: "/logs/memberships",
+						icon: <ChartNoAxesCombined className="w-4 h-4" />
+					},
+				]
+			},
 		],
 		Admin: [
 			{
 				label: "Dashboard",
 				path: "/dashboard",
 				icon: <LayoutDashboard className="w-4 h-4" />
-			},
-			{
-				label: "Cash Log",
-				path: "/cashlog",
-				icon: <Receipt className="w-4 h-4" />
 			},
 			{
 				label: "Sessions",
@@ -113,6 +146,11 @@ export default function RoleChanger({ role }) {
 				label: "Bookings",
 				path: "/booking",
 				icon: <BookOpenCheck className="w-4 h-4" />
+			},
+			{
+				label: "Cash Log",
+				path: "/cashlog",
+				icon: <Receipt className="w-4 h-4" />
 			},
 		],
 		StoreManager: [
@@ -152,6 +190,11 @@ export default function RoleChanger({ role }) {
 				label: "Cash Log",
 				path: "/cashlog",
 				icon: <Receipt className="w-4 h-4" />
+			},
+			{
+				label: "Customers",
+				path: "/customers",
+				icon: <Users className="w-4 h-4" />
 			},
 		],
 	};

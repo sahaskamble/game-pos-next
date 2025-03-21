@@ -28,5 +28,9 @@ export const ProtectedUrls = [
     url: 'cashlog',
     accessTo: ['SuperAdmin', 'Admin', 'Staff']
   },
+  {
+    url: 'customers',
+    accessTo: ['SuperAdmin', 'Admin', 'Staff']
+  }
 ]
 

@@ -39,7 +39,7 @@ const InvoiceDownload = ({ session }) => {
         <hr className="my-2" />
         <h3 className="font-bold text-blue-600">Customer Details</h3>
         <p><b>Name:</b> {session.expand?.customer_id?.customer_name}</p>
-        <p><b>Contact:</b> {session.expand?.customer_id?.phone}</p>
+        <p><b>Contact:</b> {session.expand?.customer_id?.customer_contact}</p>
         <p><b>Branch:</b> {session.expand?.branch_id?.name}</p>
         <p><b>Time:</b> {format(new Date(session.session_in), 'h:mm a')} - {session.session_out ? format(new Date(session.session_out), 'h:mm a') : 'Ongoing'}</p>
 
@@ -57,7 +57,7 @@ const InvoiceDownload = ({ session }) => {
             <tr>
               <td>{session.expand?.game_id?.name || 'Gaming Session'}</td>
               <td className="text-center">{session.duration}hr</td>
-              <td>₹{session.total_amount}</td>
+              <td>₹{session.session_amount}</td>
             </tr>
             {session.expand?.session_snacks?.map((snackEntry, index) => (
               <tr key={index}>
@@ -70,10 +70,9 @@ const InvoiceDownload = ({ session }) => {
         </table>
 
         <div className="mt-4">
-          <p className="text-right font-bold">Base Amount: ₹{session.base_amount}</p>
-          {session.snacks_total > 0 && (
-            <p className="text-right font-bold">Snacks Total: ₹{session.snacks_total}</p>
-          )}
+          <p className="text-right font-bold">Base Amount: ₹{session.session_amount}</p>
+          <p className="text-right font-bold">Snacks Total: ₹{session.snacks_total}</p>
+          <hr className="my-2" />
           {session.discount_amount > 0 && (
             <p className="text-right font-bold">Discount: ₹{session.discount_amount}</p>
           )}
@@ -83,7 +82,6 @@ const InvoiceDownload = ({ session }) => {
         <hr className="my-2" />
         <h3 className="font-bold text-blue-600">Payment Details</h3>
         <p><b>Method:</b> {session.payment_mode}</p>
-        <p><b>Status:</b> {session.status}</p>
         {session.gg_points_earned > 0 && (
           <p><b>GG Points Earned:</b> {session.gg_points_earned}</p>
         )}

@@ -16,7 +16,6 @@ export default function ApplicationLayout({ children }) {
       <SidebarInset>
         <ProtectedRoutes role={user?.role}>
           <Header />
-          <SessionNotifications />
           {children}
         </ProtectedRoutes>
       </SidebarInset>

@@ -19,8 +19,18 @@ import { useRouter } from "next/navigation";
 export function InitialCashDrawer() {
   const { user } = useAuth();
   const { createItem: addToCashInDrawer } = useCollection("cashIndrawer");
-  const { createItem: addToCashlog } = useCollection("cashlog");
+  const { data: cashlogs } = useCollection("cashlog", {
+    expand: "drawer_id,user_id,branch_id",
+    sort: "-created",
+  });
+  const { data: sessions } = useCollection("sessions", {
+    expand: 'customer_id,branch_id,device_id,game_id,session_snacks.snack_id,user_id,billed_by',
+    sort: '-created',
+  });
   const router = useRouter();
+  const today = new Date();
+  const start = today.setHours(0, 0, 0);
+  const end = today.setHours(23, 59, 59);
 
   const form = useForm({
     defaultValues: {
@@ -31,28 +41,29 @@ export function InitialCashDrawer() {
 
   const onSubmit = async (data) => {
     try {
-      const drawerRecord = await addToCashInDrawer({
+      const branch_id = localStorage.getItem('branch_id');
+      const total_sales = sessions
+        ?.filter((session) => {
+          const createdDate = new Date(session.created);
+          return createdDate >= start && createdDate <= end && session.branch_id === branch_id;
+        })
+        ?.reduce((acc, session) => acc + session.amount_paid, 0)
+
+
+      const total_expenses = cashlogs
+        ?.filter((cashlog) => {
+          const createdDate = new Date(cashlog.created);
+          return createdDate >= start && createdDate <= end && cashlog.branch_id === branch_id && cashlog.category !== 'Drawer';
+        })
+        ?.reduce((acc, cashlog) => acc + Number(cashlog?.withdraw_from_drawer?.amount) || 0, 0);
+
+      await addToCashInDrawer({
         cash_in_drawer: parseFloat(data.cash_in_drawer),
         controller_count: parseInt(data.controller_count),
         user_id: user.id,
         branch_id: localStorage.getItem('branch_id'),
+        expected_cash_in_drawer: total_sales - total_expenses
       });
-
-      if (drawerRecord) {
-        const drawerlog = await addToCashlog({
-          user_id: user.id,
-          branch_id: localStorage.getItem('branch_id'),
-          category: "Initial Cash",
-          drawer_id: drawerRecord.id,
-          category: "Drawer",
-          withdraw_from_drawer: {
-            'amount': parseFloat(data.cash_in_drawer),
-            'description': "Cash in drawer"
-          },
-          controller_count: parseInt(data.controller_count)
-        });
-        drawerlog;
-      }
       toast.success("Initial cash drawer amount and controller count set successfully");
       router.push("/booking");
     } catch (error) {

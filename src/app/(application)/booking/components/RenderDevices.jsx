@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardContent } from "@/components/ui/card";
 import { useCollection } from "@/lib/hooks/useCollection";
-import { AirplayIcon, Car, Clock, CookieIcon, MapPin, Timer, TvIcon, Users, X } from "lucide-react";
+import { AirplayIcon, Car, Clock, CookieIcon, MapPin, Timer, TvIcon, User, Users, X } from "lucide-react";
 import { FaPlaystation } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -10,7 +10,9 @@ import ShiftSession from "./ShiftSession";
 
 export default function RenderDeviceSection({ devices, title, icon, onChanged }) {
   const { data: sessions } = useCollection("sessions", {
-    filter: "status='Active'"
+    filter: "status='Active'",
+    expand: 'customer_id,branch_id,device_id,game_id,session_snacks.snack_id,user_id,billed_by',
+    sort: '-created',
   });
   const router = useRouter();
 
@@ -49,7 +51,7 @@ export default function RenderDeviceSection({ devices, title, icon, onChanged })
                 {device.status}
               </Badge>
             </CardTitle>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-2">
               <div className="flex items-center justify-between text-sm text-gray-400">
                 {device.status === "open" && (
                   <>
@@ -66,7 +68,13 @@ export default function RenderDeviceSection({ devices, title, icon, onChanged })
               </div>
 
               {device.status === "booked" && device.type !== 'VR' && (
-                <div className="text-sm text-gray-400">
+                <div className="text-sm text-gray-400 space-y-2">
+                  <div className="flex items-center gap-1">
+                    <User className="h-4 w-4" />
+                    <span>Customer: {
+                      sessions.find((session) => session.device_id === device.id)?.expand?.customer_id?.customer_name || "User not defined"
+                    }</span>
+                  </div>
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
                     <span>Ends at: {

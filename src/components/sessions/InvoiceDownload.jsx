@@ -2,9 +2,14 @@ import React, { useRef } from "react";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { format } from "date-fns";
+import { useCollection } from "@/lib/hooks/useCollection";
 
 const InvoiceDownload = ({ session }) => {
   const invoiceRef = useRef(null);
+  const { data: session_snacks } = useCollection("session_snack", {
+    filter: `session_id='${session.id}'`,
+    expand: 'session_id,snack_id',
+  });
 
   const handleDownloadPDF = async () => {
     const invoiceElement = invoiceRef.current;
@@ -59,13 +64,22 @@ const InvoiceDownload = ({ session }) => {
               <td className="text-center">{session.duration}hr</td>
               <td>₹{session.session_amount}</td>
             </tr>
-            {session.expand?.session_snacks?.map((snackEntry, index) => (
+            {session_snacks?.map((snackEntry, index) => (
+              <tr key={index}>
+                <td>{snackEntry.expand?.snack_id?.name}</td>
+                <td className="text-center">{snackEntry.quantity}</td>
+                <td>₹{snackEntry.expand?.snack_id?.price * snackEntry.quantity}</td>
+              </tr>
+            ))}
+            {/*
+              session.expand?.session_snacks?.map((snackEntry, index) => (
               <tr key={index}>
                 <td>{snackEntry.expand?.snack_id?.name}</td>
                 <td className="text-center">{snackEntry.quantity}</td>
                 <td>₹{snackEntry.price || (snackEntry.expand?.snack_id?.price * snackEntry.quantity)}</td>
               </tr>
-            ))}
+            ))
+            */}
           </tbody>
         </table>
 
@@ -85,6 +99,15 @@ const InvoiceDownload = ({ session }) => {
         {session.gg_points_earned > 0 && (
           <p><b>GG Points Earned:</b> {session.gg_points_earned}</p>
         )}
+        {
+          session.payment_mode === 'Part-paid' && (
+            <>
+              <p><b>Cash:</b> {session.Cash}</p>
+              <p><b>Upi:</b> {session.Upi}</p>
+              <p><b>Membership:</b> {session.MembershipPoints}</p>
+            </>
+          )
+        }
 
         <hr className="my-2" />
         <p className="text-center text-xs">Thank you for visiting!<br />

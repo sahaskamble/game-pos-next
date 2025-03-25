@@ -75,7 +75,6 @@ export function SessionsTable({ data = [], loading, onEdit, onDelete, displayEdi
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
             Customer
-            <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         );
       },
@@ -94,7 +93,19 @@ export function SessionsTable({ data = [], loading, onEdit, onDelete, displayEdi
         row.original.session_out ? format(new Date(row.original.session_out), 'PPp') : '-',
     },
     {
-      id: "branch",  // Simple ID for the column
+      id: "device",
+      accessorKey: "expand.device_id.name",
+      header: "Device",
+      cell: ({ row }) => row.original.expand?.device_id?.name,
+    },
+    {
+      id: "game",
+      accessorKey: "expand.game_id.name",
+      header: "Game",
+      cell: ({ row }) => row.original.expand?.game_id?.name,
+    },
+    {
+      id: "branch",
       accessorKey: "expand.branch_id.name",
       header: "Branch",
       cell: ({ row }) => row.original.expand?.branch_id?.name,

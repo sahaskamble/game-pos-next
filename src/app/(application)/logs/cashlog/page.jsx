@@ -19,7 +19,7 @@ const DATE_RANGE_OPTIONS = [
 	{ label: "Custom", value: "custom" },
 ];
 
-export default function SnacksLogsPage() {
+export default function CashLogsPage() {
 	const { data: logs } = useCollection("cashlog", {
 		expand: "drawer_id,user_id,branch_id",
 		sort: "-created",

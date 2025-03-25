@@ -23,7 +23,8 @@ import {
 	LogIn,
 	Cookie,
 	ChartNoAxesCombined,
-	HandCoins
+	HandCoins,
+	WalletCards
 } from "lucide-react";
 
 export default function RoleChanger({ role }) {
@@ -65,6 +66,11 @@ export default function RoleChanger({ role }) {
 				label: "Membership Plans",
 				path: "/memberships",
 				icon: <Ticket className="w-4 h-4" />
+			},
+			{
+				label: "Cash Drawer",
+				path: "/cash_drawer",
+				icon: <WalletCards className="w-4 h-4" />
 			},
 			{
 				label: "Cash Log",

@@ -128,6 +128,12 @@ export function AddCashlogDialog({ onSuccess }) {
                           {category}
                         </SelectItem>
                       ))}
+                      {
+                        user?.role === 'SuperAdmin' && (
+                          <SelectItem value={'Salary'}>Salary</SelectItem>
+                        )
+                      }
+                      <SelectItem value={'Purchases'}>Purchases</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -25,12 +25,23 @@ export const ProtectedUrls = [
     accessTo: ['SuperAdmin', 'Admin']
   },
   {
+    url: 'logs',
+    accessTo: ['SuperAdmin', 'Admin']
+  },
+  {
+    url: 'cash_drawer',
+    accessTo: ['SuperAdmin', 'Admin']
+  },
+  {
     url: 'cashlog',
     accessTo: ['SuperAdmin', 'Admin', 'Staff']
   },
   {
     url: 'customers',
     accessTo: ['SuperAdmin', 'Admin', 'Staff']
-  }
-]
-
+  },
+  {
+    url: 'memberships',
+    accessTo: ['SuperAdmin', 'Admin']
+  },
+];

@@ -113,7 +113,7 @@ export default function Sessions() {
   }, [data, startDate, endDate, selectedBranch]);
 
   useEffect(() => {
-    if (filteredSessions?.length) {
+    if (filteredSessions) {
       const stats = filteredSessions.reduce((acc, session) => {
         const totalAmount = session.amount_paid || 0;
         acc.totalRevenue += totalAmount;

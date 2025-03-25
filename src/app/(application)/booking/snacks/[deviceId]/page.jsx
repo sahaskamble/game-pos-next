@@ -25,7 +25,7 @@ export default function SnackSessionPage({ params }) {
 
 	const [device, setDevice] = useState({});
 	const [session, setSession] = useState(null);
-	const [loading, setLoading] = useState(false);
+	const [loading, setLoading] = useState(true);
 	const [selectedSnacks, setSelectedSnacks] = useState([]);
 
 	// First, get the device
@@ -112,19 +112,16 @@ export default function SnackSessionPage({ params }) {
 			setLoading(true);
 			try {
 				if (!device?.id) {
-					setLoading(false);
 					return;
 				}
 
 				const matchingSession = sessions.find((s) => s.device_id === device.id && s.status === 'Active');
 				if (matchingSession) {
 					setSession(matchingSession);
-					console.log('Matching Session', matchingSession);
+					setLoading(false);
 				}
 			} catch (error) {
 				console.log(error);
-			} finally {
-				setLoading(false);
 			}
 		}
 

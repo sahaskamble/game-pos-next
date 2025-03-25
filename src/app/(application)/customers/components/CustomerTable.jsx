@@ -96,7 +96,7 @@ export function CustomerTable({ customers, sessions, displayMembership, customer
       header: "Amount Spent",
       cell: ({ row }) => {
         const customerSessions = sessions.filter(s => s.customer_id === row.original.id);
-        const totalSpent = customerSessions.reduce((sum, s) => sum + (s.total_amount || 0), 0);
+        const totalSpent = customerSessions.reduce((sum, s) => sum + (s.amount_paid || 0), 0);
         return `Rs. ${totalSpent.toLocaleString()}`;
       },
     },

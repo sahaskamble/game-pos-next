@@ -24,12 +24,14 @@ export default function ExtendSessionPage({ params }) {
 
 	const [device, setDevice] = useState({});
 	const [deviceSettings, setDeviceSettings] = useState();
+	const [loading, setLoading] = useState(true);
 	const [formData, setformData] = useState({
 		no_of_players: 1,
 		duration_unit: "minutes",
 		duration: 15,
 		totalAmount: 0,
 	});
+
 
 	// First, get the device
 	useEffect(() => {
@@ -41,21 +43,10 @@ export default function ExtendSessionPage({ params }) {
 					setting.type === foundDevice.type && setting.branch_id === foundDevice.branch_id
 				);
 				setDeviceSettings(device_settings);
+				setLoading(false);
 			}
 		}
 	}, [deviceId, devices, deviceSettings]);
-
-	useEffect(() => {
-		// Use setTimeout to ensure the page has loaded and state has been updated
-		const checkSettings = setTimeout(() => {
-			if (!settings || device && (!deviceSettings || deviceSettings?.length === 0)) {
-				toast.error('No Settings found for this device type');
-				router.push('/booking');
-			}
-		}, 5000); // 5 second delay
-
-		return () => clearTimeout(checkSettings); // Cleanup timeout
-	}, [deviceSettings, settings, device, router]);
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
@@ -143,6 +134,14 @@ export default function ExtendSessionPage({ params }) {
 			setformData({ ...formData, no_of_players: device?.max_players })
 		}
 	}, [formData.no_of_players]);
+
+	if (loading) {
+		return (
+			<div className="flex items-center justify-center min-h-screen">
+				<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+			</div>
+		);
+	}
 
 	return (
 		<main className='p-8'>

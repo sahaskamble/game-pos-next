@@ -507,8 +507,10 @@ export default function CloseSessionPage({ params }) {
 
 						<Button
 							disabled={
-								formData.payment_mode === 'Part-paid' &&
-								Math.abs(finalAmount - ((formData.cash_amount || 0) + (formData.upi_amount || 0) + (formData.membership_amount || 0))) > 0}
+								(formData.payment_mode === 'Part-paid' &&
+									Math.abs(finalAmount - ((formData.cash_amount || 0) + (formData.upi_amount || 0) + (formData.membership_amount || 0))) > 0) ||
+								session?.session_amount === 0
+							}
 							type="submit"
 							className="w-full"
 						>

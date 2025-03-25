@@ -37,6 +37,7 @@ export default function BookingPage({ params }) {
   const { createItem: createSessionSnack } = useCollection("session_snack");
   const [branchId, setBranchId] = useState('');
   const [deviceSettings, setDeviceSettings] = useState();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (settings && device) {
@@ -45,6 +46,7 @@ export default function BookingPage({ params }) {
       );
       if (device_settings?.[0]) {
         setDeviceSettings(device_settings?.[0]);
+        setLoading(false);
       }
     }
   }, [settings, device]);
@@ -61,7 +63,7 @@ export default function BookingPage({ params }) {
         toast.error('No Settings found for this device type');
         router.push('/booking');
       }
-    }, 1000); // 1 second delay
+    }, 3000); // 1 second delay
 
     return () => clearTimeout(checkSettings); // Cleanup timeout
   }, [deviceSettings, settings, device, router]);
@@ -371,25 +373,13 @@ export default function BookingPage({ params }) {
     }
   };
 
-  // Add new states for session management
-  const [currentSession, setCurrentSession] = useState(null);
-
-  // Get current session if device is booked
-  useEffect(() => {
-    if (device?.[0]?.status === "Booked" && device?.[0]?.current_session) {
-      const fetchSession = async () => {
-        try {
-          const session = await pb.collection('sessions').getOne(device[0]?.current_session, {
-            expand: 'customer_id,game_id'
-          });
-          setCurrentSession(session);
-        } catch (error) {
-          console.error("Error fetching session:", error);
-        }
-      };
-      fetchSession();
-    }
-  }, [device]);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">

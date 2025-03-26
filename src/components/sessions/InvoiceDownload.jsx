@@ -45,6 +45,7 @@ const InvoiceDownload = ({ session }) => {
         <h3 className="font-bold text-blue-600">Customer Details</h3>
         <p><b>Name:</b> {session.expand?.customer_id?.customer_name}</p>
         <p><b>Contact:</b> {session.expand?.customer_id?.customer_contact}</p>
+        <p><b>Players:</b> {session.no_of_players}</p>
         <p><b>Branch:</b> {session.expand?.branch_id?.name}</p>
         <p><b>Time:</b> {format(new Date(session.session_in), 'h:mm a')} - {session.session_out ? format(new Date(session.session_out), 'h:mm a') : 'Ongoing'}</p>
 

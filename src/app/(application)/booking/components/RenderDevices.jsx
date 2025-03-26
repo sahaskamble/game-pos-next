@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardContent } from "@/components/ui/card";
 import { useCollection } from "@/lib/hooks/useCollection";
-import { AirplayIcon, Car, Clock, CookieIcon, MapPin, Timer, TvIcon, User, Users, X } from "lucide-react";
+import { AirplayIcon, Car, Clock, CookieIcon, Gamepad2, MapPin, Timer, TvIcon, User, Users, X } from "lucide-react";
 import { FaPlaystation } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -72,7 +72,15 @@ export default function RenderDeviceSection({ devices, title, icon, onChanged })
                   <div className="flex items-center gap-1">
                     <User className="h-4 w-4" />
                     <span>Customer: {
-                      sessions.find((session) => session.device_id === device.id)?.expand?.customer_id?.customer_name || "User not defined"
+                      sessions?.find((session) => session.device_id === device.id)
+                        ?.expand?.customer_id?.customer_name || "User not defined"
+                    }</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Gamepad2 className="h-4 w-4" />
+                    <span>Players: {
+                      sessions?.find((session) => session.device_id === device.id)
+                        ?.no_of_players || "4"
                     }</span>
                   </div>
                   <div className="flex items-center gap-1">

@@ -164,14 +164,14 @@ export default function CloseSessionPage({ params }) {
 				break;
 
 			case 'discount_percentage':
-				if (value > 50) {
-					value = 50
+				if (value > 100) {
+					value = 100
 				}
 				break;
 
 			case 'discount_amount':
-				if (value > (formData.session_amount * 0.5)) {
-					value = formData.session_amount * 0.5
+				if (value > (formData.session_amount)) {
+					value = formData.session_amount
 				}
 				break;
 		}

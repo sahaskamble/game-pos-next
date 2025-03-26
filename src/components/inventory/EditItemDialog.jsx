@@ -28,7 +28,7 @@ export function EditItemDialog({ open, onOpenChange, fields, onSubmit, initialDa
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await onSubmit(formData);
+    await onSubmit(formData?.id, formData);
     onOpenChange(false);
   };
 
@@ -47,8 +47,8 @@ export function EditItemDialog({ open, onOpenChange, fields, onSubmit, initialDa
             </SelectTrigger>
             <SelectContent>
               {field.options.map((option) => (
-                <SelectItem 
-                  key={typeof option === 'object' ? option.value : option} 
+                <SelectItem
+                  key={typeof option === 'object' ? option.value : option}
                   value={typeof option === 'object' ? option.value : option}
                 >
                   {typeof option === 'object' ? option.label : option}
@@ -57,7 +57,7 @@ export function EditItemDialog({ open, onOpenChange, fields, onSubmit, initialDa
             </SelectContent>
           </Select>
         );
-      
+
       case "relation":
         return (
           <Select
@@ -87,6 +87,7 @@ export function EditItemDialog({ open, onOpenChange, fields, onSubmit, initialDa
             onChange={(e) =>
               setFormData({ ...formData, [field.name]: e.target.value })
             }
+            placeholder={formData[field.placeholder] || ''}
           />
         );
 

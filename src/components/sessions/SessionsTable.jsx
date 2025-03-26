@@ -138,31 +138,33 @@ export function SessionsTable({ data = [], loading, onEdit, onDelete, displayEdi
       cell: ({ row }) => {
         const session = row.original;
         return (
-          <>
-            {user?.role === 'SuperAdmin' ? (
-              <>
+          <div>
+            {displayEditDel ? (
+              <div className="flex gap-2">
                 {
-                  displayEditDel && (
-                    <div className="flex gap-2">
+                  user?.role === 'SuperAdmin' && (
+                    <>
                       <Button variant="ghost" size="icon" onClick={() => onEdit(session)}>
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => onDelete(session.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="default"
-                        size="icon"
-                        onClick={() => setSelectedSession(session)}
-                      >
-                        <FileText className="h-4 w-4" color="#fff" />
-                      </Button>
-                    </div>
+                    </>
                   )
                 }
-              </>
+                <div className={`${user?.role !== 'SuperAdmin' && 'px-2'}`}>
+                  <Button
+                    variant="default"
+                    size="icon"
+                    onClick={() => setSelectedSession(session)}
+                  >
+                    <FileText className="h-4 w-4" color="#fff" />
+                  </Button>
+                </div>
+              </div>
             ) : null}
-          </>
+          </div>
         );
       },
     },

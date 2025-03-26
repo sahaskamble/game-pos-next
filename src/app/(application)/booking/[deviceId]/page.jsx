@@ -91,18 +91,48 @@ export default function BookingPage({ params }) {
     ggPointsValue: 0
   });
 
+  const handleDuration = (value) => {
+    if (value === '') {
+      setFormData({
+        ...formData,
+        duration: value
+      });
+    } else if (!isNaN(value)) {
+      const max = formData?.duration_unit === 'minutes' ? 60 : 24
+      setFormData({
+        ...formData,
+        duration: Number(value) > max ? max : Number(value)
+      });
+    } else {
+      const max = formData?.duration_unit === 'minutes' ? 60 : 24
+      setFormData({
+        ...formData,
+        duration: max
+      });
+    }
+  }
+
   const handlePlayersChange = (e) => {
-    const value = parseInt(e.target.value) || 1;
+    const value = e.target.value;
     const maxPlayers = device?.[0]?.max_players || 4;
 
-    if (value > maxPlayers) {
+    if (value === '') {
+      setFormData({
+        ...formData,
+        no_of_players: value
+      });
+    } else if (!isNaN(value)) {
+      setFormData(prev => ({
+        ...prev,
+        no_of_players: Math.max(1, Math.min(Number(value), maxPlayers))
+      }));
+    } else {
       toast.warning(`Maximum ${maxPlayers} players allowed`);
+      setFormData({
+        ...formData,
+        no_of_players: maxPlayers
+      });
     }
-
-    setFormData(prev => ({
-      ...prev,
-      no_of_players: Math.max(1, Math.min(value, maxPlayers))
-    }));
   };
 
   const handleSnackAdd = (snackId) => {
@@ -516,11 +546,11 @@ export default function BookingPage({ params }) {
                     min={formData.duration_unit === "minutes" ? 15 : 1}
                     step={formData.duration_unit === "minutes" ? 15 : 1}
                     value={formData.duration}
-                    onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+                    onChange={(e) => handleDuration(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="duration_unit">Duration Unit</Label>
+                  <Label>Duration Unit</Label>
                   <Select
                     value={formData.duration_unit}
                     onValueChange={(value) => {

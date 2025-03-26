@@ -41,8 +41,8 @@ export function AddItemDialog({ open, onOpenChange, fields, onSubmit, type = "it
             </SelectTrigger>
             <SelectContent>
               {field.options.map((option) => (
-                <SelectItem 
-                  key={typeof option === 'object' ? option.value : option} 
+                <SelectItem
+                  key={typeof option === 'object' ? option.value : option}
                   value={typeof option === 'object' ? option.value : option}
                 >
                   {typeof option === 'object' ? option.label : option}
@@ -51,7 +51,7 @@ export function AddItemDialog({ open, onOpenChange, fields, onSubmit, type = "it
             </SelectContent>
           </Select>
         );
-      
+
       case "relation":
         return (
           <Select
@@ -81,6 +81,7 @@ export function AddItemDialog({ open, onOpenChange, fields, onSubmit, type = "it
             onChange={(e) =>
               setFormData({ ...formData, [field.name]: e.target.value })
             }
+            placeholder={formData[field.placeholder] || ''}
           />
         );
 
@@ -91,6 +92,7 @@ export function AddItemDialog({ open, onOpenChange, fields, onSubmit, type = "it
             onChange={(e) =>
               setFormData({ ...formData, [field.name]: e.target.value })
             }
+            placeholder={formData[field.placeholder] || ''}
           />
         );
     }

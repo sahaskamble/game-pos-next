@@ -26,7 +26,6 @@ export default function CloseSessionPage({ params }) {
 	const { data: devices, updateItem: updateDevice } = useCollection("devices");
 
 	const [device, setDevice] = useState({});
-	const [deviceSettings, setDeviceSettings] = useState();
 	const [session, setSession] = useState(null); // Session
 	const [customer, setCustomer] = useState(null); // Customer
 	const [loading, setLoading] = useState(true);
@@ -34,17 +33,13 @@ export default function CloseSessionPage({ params }) {
 		total_amount: 0,
 		session_amount: 0,
 		discount_unit: "percentage", // Changed from discount_type to discount_unit
-		discount_percentage: 0,
-		discount_amount: 0,
-		gg_point_used: 0,
-		payment_mode: '', // Changed from a default value to empty string
-		gg_price: 0,
-		cash_amount: 0,
-		membership_amount: 0,
-		upi_amount: 0
+		discount_percentage: '',
+		discount_amount: '',
+		gg_point_used: '',
+		gg_price: '',
+		payment_mode: ''
 	});
 	const [maxGGPoints, setMaxGGPoints] = useState(0);
-	const [maxWallet, setMaxWallet] = useState(0);
 	const [finalAmount, setFinalAmount] = useState(0);
 
 	// First, get the device
@@ -53,10 +48,6 @@ export default function CloseSessionPage({ params }) {
 			const foundDevice = devices.find(d => d.id === deviceId);
 			if (foundDevice) {
 				setDevice(foundDevice);
-				const device_settings = settings.find((setting) =>
-					setting.type === foundDevice.type && setting.branch_id === foundDevice.branch_id
-				);
-				setDeviceSettings(device_settings);
 			}
 		}
 	}, [deviceId, devices]);
@@ -66,7 +57,6 @@ export default function CloseSessionPage({ params }) {
 		const fetchData = async () => {
 			try {
 				if (!device?.id) return;
-				if (!settings || !deviceSettings) return;
 
 				const matchingSession = sessions.find((s) => s.device_id === device.id && s.status === 'Active');
 				if (matchingSession) {
@@ -79,22 +69,21 @@ export default function CloseSessionPage({ params }) {
 
 					const closingVariables = calculateSessionClosePrice({
 						ggPoints: 0,
-						total_amount: sessionTotalAmount,
-						settings: deviceSettings
+						total_amount: matchingSession.session_amount,
+						settings: settings[0]
 					});
 
 					setMaxGGPoints((closingVariables?.maxGGPriceToBeUsed > matchingCustomer?.total_rewards) ? matchingCustomer?.total_rewards : closingVariables?.maxGGPriceToBeUsed);
-					setMaxWallet((finalAmount > matchingCustomer?.wallet) ? matchingCustomer?.wallet : finalAmount);
 
 					setFormData({
 						...formData,
 						total_amount: sessionTotalAmount,
-						session_amount: matchingSession.session_amount,
-						gg_point_used: 0,
+						session_amount: matchingSession?.session_amount,
+						payment_mode: matchingSession.payment_mode,
+						gg_point_used: '',
 						gg_price: 0,
-						discount_amount: 0,
-						discount_percentage: 0,
-						payment_mode: matchingSession.payment_mode, // Changed to empty string instead of using matchingSession.payment_mode
+						discount_amount: '',
+						discount_percentage: ''
 					});
 
 					setFinalAmount(sessionTotalAmount);
@@ -109,7 +98,7 @@ export default function CloseSessionPage({ params }) {
 		if (sessions && settings && customers && device?.id) {
 			fetchData();
 		}
-	}, [device?.id, sessions, settings, customers, finalAmount]);
+	}, [device?.id, sessions, settings, customers]);
 
 	// Calculate final amount whenever discount values or GG points change
 	useEffect(() => {
@@ -120,36 +109,31 @@ export default function CloseSessionPage({ params }) {
 
 		// Reset all discount values first
 		let newFormData = { ...formData };
-		// Preserve the payment_mode selected by the user
-		const currentPaymentMode = formData.payment_mode;
 
 		if (formData.discount_unit === "percentage" && formData.discount_percentage > 0) {
-			newFormData.discount_amount = (session.session_amount * formData.discount_percentage / 100).toFixed(2);
-			newFormData.gg_point_used = 0;
-			newFormData.gg_price = 0;
-			calculatedAmount = session.session_amount - newFormData.discount_amount;
+			newFormData.discount_amount = (session?.session_amount * formData.discount_percentage / 100).toFixed(2);
+			newFormData.gg_point_used = '';
+			newFormData.gg_price = '';
+			calculatedAmount = baseAmount - newFormData.discount_amount;
 		}
 		else if (formData.discount_unit === "amount" && formData.discount_amount > 0) {
-			newFormData.discount_percentage = ((formData.discount_amount / session.session_amount) * 100).toFixed(2);
-			newFormData.gg_point_used = 0;
-			newFormData.gg_price = 0;
-			calculatedAmount = session.session_amount - formData.discount_amount;
+			newFormData.discount_percentage = ((formData.discount_amount / session?.session_amount) * 100).toFixed(2);
+			newFormData.gg_point_used = '';
+			newFormData.gg_price = '';
+			calculatedAmount = baseAmount - formData.discount_amount;
 		}
 		else if (formData.discount_unit === "gg_points" && formData.gg_point_used > 0) {
 			const closingVariables = calculateSessionClosePrice({
 				ggPoints: formData.gg_point_used,
-				total_amount: baseAmount,
-				settings: deviceSettings
+				total_amount: session?.session_amount,
+				settings: settings[0]
 			});
 
 			newFormData.gg_price = closingVariables?.ggPrice || 0;
-			newFormData.discount_amount = 0;
-			newFormData.discount_percentage = 0;
+			newFormData.discount_amount = '';
+			newFormData.discount_percentage = '';
 			calculatedAmount = baseAmount - newFormData.gg_price;
 		}
-
-		// Restore the user's payment mode selection
-		newFormData.payment_mode = currentPaymentMode;
 
 		setFormData(newFormData);
 		setFinalAmount(calculatedAmount);
@@ -159,11 +143,13 @@ export default function CloseSessionPage({ params }) {
 		setFormData({
 			...formData,
 			discount_unit: value,
-			discount_amount: 0,
-			discount_percentage: 0,
-			gg_point_used: 0,
-			gg_price: 0
-			// payment_mode is preserved
+			discount_amount: '',
+			discount_percentage: '',
+			gg_point_used: '',
+			gg_price: '',
+			cash_amount: '',
+			membership_amount: '',
+			upi_amount: ''
 		});
 	};
 
@@ -218,7 +204,7 @@ export default function CloseSessionPage({ params }) {
 					return;
 				}
 			} else if (formData.payment_mode === "Membership") {
-				if (maxWallet < finalAmount) {
+				if (finalAmount > customer?.wallet) {
 					toast.error(`Not enough amount in wallet`);
 					return;
 				}
@@ -228,7 +214,7 @@ export default function CloseSessionPage({ params }) {
 			await updateSession(session.id, {
 				...session,
 				status: 'Closed',
-				billed_by: user.id,
+				billed_by: user?.id,
 				amount_paid: finalAmount,
 				discount_amount: formData.discount_amount,
 				discount_percentage: formData.discount_percentage,
@@ -250,6 +236,7 @@ export default function CloseSessionPage({ params }) {
 
 			// Update Wallet
 			const customer = customers?.find((customer_info) => customer_info?.id === session?.customer_id);
+
 			if (customer?.id) {
 				const totalPointsUsed = customer?.total_rewards - formData?.gg_point_used;
 				let walletUsed;
@@ -271,6 +258,7 @@ export default function CloseSessionPage({ params }) {
 				});
 
 			}
+
 			router.replace('/booking')
 		} catch (error) {
 			console.error("Error closing session:", error);
@@ -297,15 +285,9 @@ export default function CloseSessionPage({ params }) {
 				<section className='grid gap-2 text-muted-foreground'>
 					{customer && (
 						<>
-							<div className='flex items-center flex-wrap justify-between px-4 pt-4 font-semibold'>
-								<div className='flex items-center gap-2'>
-									<h1 className='text-foreground'>Wallet:- </h1>
-									<p>Rs. {customer?.wallet || 0} </p>
-								</div>
-								<div className='flex items-center gap-2'>
-									<h1 className='text-foreground'>Max usage:- </h1>
-									<p>Rs. {maxWallet} </p>
-								</div>
+							<div className='flex items-center gap-2 px-4 pt-4 font-semibold'>
+								<h1 className='text-foreground'>Wallet: - </h1>
+								<p>Rs. {customer?.wallet || 0}</p>
 							</div>
 							<div className='flex items-center flex-wrap justify-between px-4 font-semibold'>
 								<div className='flex items-center gap-2'>
@@ -362,11 +344,12 @@ export default function CloseSessionPage({ params }) {
 						<h1>Total</h1>
 						<p>Rs. {finalAmount.toFixed(2)}</p>
 					</div>
-					<div className='flex items-center justify-between text-sm text-muted-foreground font-semibold px-4'>
-						<h1>Selected Payment Mode</h1>
+
+
+					<div className='flex items-center justify-between text-foreground font-semibold px-4'>
+						<h1>Payment Mode</h1>
 						<p>{formData?.payment_mode}</p>
 					</div>
-
 					<div id='separator' className='border border-muted-foreground mt-4' />
 
 					<form onSubmit={handleSubmit} className="space-y-4 p-4">
@@ -396,6 +379,7 @@ export default function CloseSessionPage({ params }) {
 									name="discount_percentage"
 									value={formData.discount_percentage}
 									onChange={handleInputChange}
+									placeholder='Discount in %'
 									min="0"
 									max="100"
 								/>
@@ -411,6 +395,7 @@ export default function CloseSessionPage({ params }) {
 									name="discount_amount"
 									value={formData.discount_amount}
 									onChange={handleInputChange}
+									placeholder='Discount in Rs.'
 									min="0"
 									max={session ? (session.session_amount + session.snacks_total) : 0}
 								/>
@@ -426,6 +411,7 @@ export default function CloseSessionPage({ params }) {
 									name="gg_point_used"
 									value={formData.gg_point_used}
 									onChange={handleInputChange}
+									placeholder='GG Points'
 									min="0"
 									max={maxGGPoints}
 								/>
@@ -433,23 +419,22 @@ export default function CloseSessionPage({ params }) {
 						)}
 
 						<div className="space-y-2">
-							<Label htmlFor="payment_mode">Payment Mode</Label>
+							<Label htmlFor="discount_unit">Payment Mode</Label>
 							<Select
 								value={formData.payment_mode}
 								onValueChange={(value) => setFormData({ ...formData, payment_mode: value })}
 							>
 								<SelectTrigger>
-									<SelectValue placeholder="Select Payment Mode" />
+									<SelectValue placeholder="Payment Mode" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="Upi">UPI</SelectItem>
 									<SelectItem value="Cash">Cash</SelectItem>
+									<SelectItem value="Upi">UPI</SelectItem>
 									<SelectItem value="Membership">Membership</SelectItem>
-									<SelectItem value="Part-paid">Part-paid</SelectItem>
+									<SelectItem value="Part-paid">Part Paid</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
-
 						{formData.payment_mode === "Part-paid" && (
 							<div className="space-y-4">
 								<div className="space-y-2">
@@ -459,7 +444,10 @@ export default function CloseSessionPage({ params }) {
 										id="cash_amount"
 										name="cash_amount"
 										value={formData.cash_amount}
-										onChange={(e) => setFormData({ ...formData, cash_amount: parseFloat(e.target.value) || 0 })}
+										onChange={(e) => setFormData({
+											...formData,
+											cash_amount: e.target.value === '' ? '' : parseFloat(e.target.value)
+										})}
 										placeholder="Enter cash amount"
 										min="0"
 										max={finalAmount}
@@ -473,7 +461,10 @@ export default function CloseSessionPage({ params }) {
 										id="upi_amount"
 										name="upi_amount"
 										value={formData.upi_amount}
-										onChange={(e) => setFormData({ ...formData, upi_amount: parseFloat(e.target.value) || 0 })}
+										onChange={(e) => setFormData({
+											...formData,
+											upi_amount: e.target.value === '' ? '' : parseFloat(e.target.value)
+										})}
 										placeholder="Enter UPI amount"
 										min="0"
 										max={finalAmount}
@@ -487,7 +478,10 @@ export default function CloseSessionPage({ params }) {
 										id="membership_amount"
 										name="membership_amount"
 										value={formData.membership_amount}
-										onChange={(e) => setFormData({ ...formData, membership_amount: parseFloat(e.target.value) || 0 })}
+										onChange={(e) => setFormData({
+											...formData,
+											membership_amount: e.target.value === '' ? '' : parseFloat(e.target.value)
+										})}
 										placeholder="Enter membership amount"
 										min="0"
 										max={customer?.wallet || 0}
@@ -495,12 +489,19 @@ export default function CloseSessionPage({ params }) {
 								</div>
 
 								<div className="text-sm text-muted-foreground">
-									Total Entered: ₹{((formData.cash_amount || 0) + (formData.upi_amount || 0) + (formData.membership_amount || 0)).toFixed(2)}
-									{(formData.cash_amount || 0) + (formData.upi_amount || 0) + (formData.membership_amount || 0) !== finalAmount && (
-										<span className="text-red-500 ml-2">
-											(Difference: ₹{(finalAmount - ((formData.cash_amount || 0) + (formData.upi_amount || 0) + (formData.membership_amount || 0))).toFixed(2)})
-										</span>
-									)}
+									Total Entered: ₹{((parseFloat(formData.cash_amount) || 0) +
+										(parseFloat(formData.upi_amount) || 0) +
+										(parseFloat(formData.membership_amount) || 0)).toFixed(2)}
+									{(parseFloat(formData.cash_amount) || 0) +
+										(parseFloat(formData.upi_amount) || 0) +
+										(parseFloat(formData.membership_amount) || 0) !== finalAmount && (
+											<span className="text-red-500 ml-2">
+												(Difference: ₹{(finalAmount -
+													((parseFloat(formData.cash_amount) || 0) +
+														(parseFloat(formData.upi_amount) || 0) +
+														(parseFloat(formData.membership_amount) || 0))).toFixed(2)})
+											</span>
+										)}
 								</div>
 							</div>
 						)}

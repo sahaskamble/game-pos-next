@@ -282,6 +282,14 @@ export default function VRSessionBooking({ params }) {
 				<form onSubmit={handleSubmit} className="space-y-4">
 					<div className="space-y-4">
 						<div className="space-y-2">
+							<Label htmlFor="phone">In-Time</Label>
+							<Input
+								type="datetime-local"
+								value={formData.session_in}
+								onChange={(e) => setFormData({ ...formData, session_in: e.target.value })}
+							/>
+						</div>
+						<div className="space-y-2">
 							<Label htmlFor="customer_name">Customer Name</Label>
 							<div className="relative">
 								<Input

@@ -30,7 +30,7 @@ export default function ExtendSessionPage({ params }) {
 	// First, get the device
 	useEffect(() => {
 		if (devices && deviceId) {
-			const foundDevice = devices.find(d => d.id === deviceId);
+			const foundDevice = devices.find(d => d?.id === deviceId);
 			if (foundDevice) {
 				setDevice(foundDevice);
 				const branchId = localStorage.getItem('branch_id');
@@ -43,7 +43,7 @@ export default function ExtendSessionPage({ params }) {
 		e.preventDefault();
 		try {
 			// Find the session associated with this device
-			const session = await sessions.find((session) => session.device_id === device.id && session.status === 'Active');
+			const session = await sessions?.find((session) => session?.device_id === device?.id && session?.status === 'Active');
 
 			if (!session) {
 				toast.error('No active session found for this device');
@@ -51,15 +51,14 @@ export default function ExtendSessionPage({ params }) {
 				return;
 			}
 
-			const game = games.find((game_info) => game_info?.id === formData.game_id);
+			const game = games?.find((game_info) => game_info?.id === formData?.game_id);
 			const basePrice = game?.price || 0;
-			console.log("Session Price", basePrice);
 			const updatePayload = {
-				session_amount: session.session_amount + basePrice,
-				total_amount: session.total_amount + basePrice,
+				session_amount: session?.session_amount + basePrice,
+				total_amount: session?.total_amount + basePrice,
 			};
 
-			await updateSession(session.id, updatePayload);
+			await updateSession(session?.id, updatePayload);
 			toast.success('Session extended successfully!');
 			router.replace('/booking');
 
@@ -80,7 +79,7 @@ export default function ExtendSessionPage({ params }) {
 					<div className='mt-6 grid gap-2'>
 						<Label>Game</Label>
 						<Select
-							value={formData.game_id}
+							value={formData?.game_id}
 							onValueChange={(value) => setFormData(prev => ({ ...prev, game_id: value }))}
 						>
 							<SelectTrigger>
@@ -88,7 +87,7 @@ export default function ExtendSessionPage({ params }) {
 							</SelectTrigger>
 							<SelectContent>
 								{games
-									?.filter((game) => game?.type === 'VR' && game.branch_id === formData?.branch_id)
+									?.filter((game) => game?.type === 'VR' && game?.branch_id === formData?.branch_id)
 									?.map(game => (
 										<SelectItem key={game.id} value={game?.id}>
 											{game.name}

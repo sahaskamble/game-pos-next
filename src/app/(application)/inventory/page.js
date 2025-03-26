@@ -146,7 +146,6 @@ export default function Inventory() {
             label: branch.name
           })) || []
         },
-        { name: "game_avatar", type: "file", label: "Game Avatar", maxSelect: 1 }
       ],
     },
     snacks: {
@@ -156,10 +155,10 @@ export default function Inventory() {
       update: updateSnack,
       delete: deleteSnack,
       fields: [
-        { name: "name", type: "text", label: "Name" },
+        { name: "name", type: "text", label: "Name", placeholder: 'Snack Name' },
         { name: "type", type: "select", label: "Type", options: ["eatable", "drinkable"] },
-        { name: "price", type: "number", label: "Price" },
-        { name: "quanity", type: "number", label: "Quantity" },
+        { name: "price", type: "number", label: "Price", placeholder: 'In Rs.' },
+        { name: "quanity", type: "number", label: "Quantity", placeholder: 'In pcs.' },
         {
           name: "branch_id",
           type: "relation",
